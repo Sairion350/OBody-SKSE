@@ -9,6 +9,12 @@ namespace Papyrus
 	int32_t femalesFound = 0;
 	int32_t malesFound = 0;
 
+
+	void GenActor(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	{
+		logger::info("A wild {} has appeared", a_actor->GetName());
+	}
+
 	RE::FormID GetRandomFemaleFormID(RE::StaticFunctionTag*)
 	{
 		auto actors = Body::Actors::GetSingleton();
@@ -168,7 +174,9 @@ namespace Papyrus
 			return false;
 		}
 
-		const auto obj = "OBody"sv;
+		const auto obj = "OBodyNative"sv;
+
+		BIND(GenActor);
 
 		BIND(IsPrefiltered);
 		BIND(PreFilterActors);
