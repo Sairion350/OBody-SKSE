@@ -11,7 +11,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 			SKEE::InterfaceExchangeMessage msg;
 			auto intfc = SKSE::GetMessagingInterface();
 			intfc->Dispatch(SKEE::InterfaceExchangeMessage::kExchangeInterface, (void*)&msg, sizeof(SKEE::InterfaceExchangeMessage*), "skee");
-			if (msg.interfaceMap) {
+			if (!msg.interfaceMap) {
 				logger::critical("Couldn't get interface map!");
 				return;
 			}
