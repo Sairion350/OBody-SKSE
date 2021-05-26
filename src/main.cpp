@@ -15,7 +15,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 				logger::critical("Couldn't get interface map!");
 				return;
 			}
-			
+
 			auto morphInt = static_cast<SKEE::IBodyMorphInterface*>(msg.interfaceMap->QueryInterface("BodyMorph"));
 			if (!morphInt) {
 				logger::critical("Couldn't get serialization MorphInterface!");
