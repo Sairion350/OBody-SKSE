@@ -4,6 +4,8 @@ namespace Papyrus
 {
 	using VM = RE::BSScript::IVirtualMachine;
 
+	void GenActor(RE::StaticFunctionTag*, RE::Actor* act);
+	
 	void MorphFemale(RE::StaticFunctionTag*);
 	void MorphMale(RE::StaticFunctionTag*);
 

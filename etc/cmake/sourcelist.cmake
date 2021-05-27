@@ -5,4 +5,5 @@ set(sources ${sources}
 	src/Body/Actors.cpp
 	src/Body/Morph.cpp
 	src/Body/MorphProcedural.cpp
+	src/Body/OBody.cpp
 )

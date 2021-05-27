@@ -5,4 +5,5 @@ set(headers ${headers}
 	src/Body/Actors.h
 	src/Body/Morph.h
 	src/Body/MorphProcedural.h
+	src/Body/OBody.h
 )
