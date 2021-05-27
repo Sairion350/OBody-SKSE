@@ -3,6 +3,7 @@
 #include "Body/Actors.h"
 #include "Body/Morph.h"
 #include "Body/MorphProcedural.h"
+#include "Body/OBody.h"
 
 namespace Papyrus
 {
@@ -10,9 +11,10 @@ namespace Papyrus
 	int32_t malesFound = 0;
 
 
-	void GenActor(RE::StaticFunctionTag*, RE::Actor* a_actor)
+	void GenActor(RE::StaticFunctionTag*, RE::Actor* act)
 	{
-		logger::info("A wild {} has appeared", a_actor->GetName());
+		auto OBodyinstance = Body::OBody::GetInstance();
+		OBodyinstance->GenerateActorBody(act);
 	}
 
 	RE::FormID GetRandomFemaleFormID(RE::StaticFunctionTag*)
