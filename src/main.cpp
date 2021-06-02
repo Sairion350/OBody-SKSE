@@ -2,6 +2,9 @@
 #include "Body/Morph.h"
 #include "Papyrus.h"
 #include "SKEE.h"
+#include "Event/Event.h"
+
+#include "Body/OBody.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 {
@@ -23,9 +26,15 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 			}
 
 			logger::info("BodyMorph Version {}", morphInt->GetVersion());
-			auto morph = Body::Morph::GetSingleton();
-			if (!morph->SetMorphInterface(morphInt))
+			auto OBodyinstance = Body::OBody::GetInstance();
+			if (!OBodyinstance->SetMorphInterface(morphInt))
 				logger::info("BodyMorphInterace not provided");
+
+			OBodyinstance->SetLoaded(false);
+			OBodyinstance->GenerateDatabases();
+
+			//OBodyinstance->MountOBodyFaction();
+			Event::Register();
 		}
 		break;
 	}
@@ -79,6 +88,16 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus->Register(Papyrus::Bind))
 		return false;
+
+
+	auto events = RE::ScriptEventSourceHolder::GetSingleton();
+	if (events) {
+		//events->AddEventSink(Body::OBody::GetInstance());
+		//events->AddEventSink(EquipEventHandler::GetSingleton());
+		//events->AddEventSink(AnimationEventHandler::GetSingleton());
+	}
+
+
 
 	logger::info("OBody loaded"sv);
 
