@@ -107,6 +107,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
 add_subdirectory("lib/CommonLibSSE" CommonLibSSE)
 
 find_package(spdlog REQUIRED)
+find_package(pugixml REQUIRED)
 
 # ---- Add source files ----
 
@@ -166,6 +167,7 @@ target_link_libraries(
 	PUBLIC
 		CommonLibSSE::CommonLibSSE
 		spdlog::spdlog
+		pugixml
 )
 
 target_precompile_headers(

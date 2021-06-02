@@ -2,6 +2,7 @@
 
 #include "RE/Skyrim.h"
 #include "SKSE/SKSE.h"
+#include "pugixml.hpp"
 
 #include <random>
 
