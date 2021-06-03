@@ -1,39 +1,41 @@
 #include "Body/OBody.h"
 
-#include <string>
-#include <vector>
+
 
 using namespace std;
 
-/*
-	Database structure from largest to smallest:
-
-	Database:
-		- todo
-	Bodyslide preset:
-		- todo
-		Type: Tuple < string, string, vector<float>, vector<pair<string, pair<float, float>>> >
-
-		Values: Tuple < Name, Body, Scores, Slider set >
-	Slider set:
-		Type: vector<pair<string, pair<float, float>>>
-		Represents: A list of all of the sliders in a bodyslide preset
-		Values: vector<slider>
-	Slider:
-		Type: pair<string, pair<float, float>> slider
-		Represents: A bodyslide slider
-		Values: pair<Slider name, Slider values>
-	Slider values:
-		Type: pair<float, float>
-		Represents: The min and max values of a individual bodyslide slider
-		Values: pair<Minimum possible value, Maximum possible value>
-
-*/
 
 namespace Body{
 
+	
+	
+	struct SliderSet
+	{
+		vector<struct Slider> sliders;
+	};
+	struct BodyslidePreset
+	{
+		string name;
+		string body;
+		vector<float> scores;
+		struct SliderSet sliders;
+	};
+	struct Slider
+	{
+		string name;
+		float min;
+		float max;
+	};
+	struct PresetDatabase
+	{
+		vector<struct BodyslidePreset> presets;
+	};
+
+
+	struct PresetDatabase FemalePresets;
+	struct PresetDatabase MalePresets;
+
 	const fs::path root_path("Data\\CalienteTools\\BodySlide\\SliderPresets");
-	const char* key = "OBody";
 
 	OBody* OBody::GetInstance(){
 			static OBody instance;
@@ -52,9 +54,9 @@ namespace Body{
 			return;
 		}
 
-		logger::info("Has: {}", GetMorph(act, "obody_processed"));
-
+		//logger::info("Has: {}", GetMorph(act, "obody_processed"));
 		//if (morphInt->HasBodyMorphKey(act, key)){
+
 		if (GetMorph(act, "obody_processed") == 1.0f){
 			// ignore, already set
 			logger::info("Skipping: {}", act->GetName());
@@ -74,68 +76,164 @@ namespace Body{
 	}
 
 	void OBody::GenerateActorBody(RE::Actor* act){
-		logger::info("A wild {}  appeared", act->GetName());
+		struct BodyslidePreset preset;
 
-		auto docz = GetDocFromFile("Data\\CalienteTools\\BodySlide\\SliderPresets\\Teru Apex V2 3BBB.xml");
+		if (IsFemale(act)){
+			preset = GetRandomElementOfDatabase(FemalePresets);
+		} else {
+			preset = GetRandomElementOfDatabase(MalePresets);
+		}
 
-		GenerateFullBodyFromPreset(act, GeneratePresetFromDoc(docz));
+		GenerateFullBodyFromPreset(act, preset);
 	
-		SetMorph(act, "obody_processed", 1.0f);
+		SetMorph(act, "obody_processed", 1.0f, "OBody");
 		
 	}
 
-	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, tuple<string, string, vector<float>, vector<pair<string, pair<float, float>>>> BodyslidePreset){
-		ApplyBodyslidePreset(act, BodyslidePreset);
+	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, struct BodyslidePreset preset){
+		ApplyBodyslidePreset(act, preset);
+
+		logger::info("    Applying preset: {}", preset.name);
+
+		auto clotheSet = GenerateClotheSliders(act);
+
+		//PrintSliderSet(clotheSet);
+		ApplySliderSet(act, clotheSet, "OClothe");
 
 		ApplyMorphs(act);
+
+
+		SetMorph(act, "obody_processed", 1.0f, "OBody");
 	}
 
-	void OBody::SetMorph(RE::Actor* act, string MorphName, float value){
-		morphInt->SetMorph(act->AsReference(), MorphName.c_str(), key, value);
+	void OBody::SetMorph(RE::Actor* act, string MorphName, float value, string key){
+		morphInt->SetMorph(act->AsReference(), MorphName.c_str(), key.c_str(), value);
 	}
 
 	float OBody::GetMorph(RE::Actor* act, string MorphName){
-		return morphInt->GetMorph(act->AsReference(), MorphName.c_str(), key);
+		return morphInt->GetMorph(act->AsReference(), MorphName.c_str(), "OBody");
 	}
 
-	void OBody::SetMorphByWeight(RE::Actor* act, string MorphName, pair<float, float> values, float weight){
-		float value = ((values.second - values.first) * weight) + values.first;
-		SetMorph(act, MorphName, value);
+	void OBody::SetMorphByWeight(RE::Actor* act, struct Slider slider, float weight, string key){
+		float value = ((slider.max - slider.min) * weight) + slider.min;
+		SetMorph(act, slider.name, value, key);
 	}
 
-	void OBody::ApplySlider(RE::Actor* act, pair<string, pair<float, float>> slider, float weight){
-		SetMorphByWeight(act, slider.first, slider.second, weight);
+	void OBody::ApplySlider(RE::Actor* act, struct Slider slid, float weight, string key){
+		SetMorphByWeight(act, slid, weight, key);
 	}
 
-	void OBody::ApplySliderSet(RE::Actor* act, vector<pair<string, pair<float, float>>> sliderSet){
+	void OBody::ApplySliderSet(RE::Actor* act, struct SliderSet sliderset, string key){
 		auto weight = GetWeight(act);
-		for (auto i = sliderSet.begin(); i != sliderSet.end(); ++i)
-        	ApplySlider(act, *i, weight);
+		for (auto i = sliderset.sliders.begin(); i != sliderset.sliders.end(); ++i)
+        	ApplySlider(act, *i, weight, key);
 	}
 
-	void OBody::ApplyBodyslidePreset(RE::Actor* act, tuple<string, string, vector<float>, vector<pair<string, pair<float, float>>>> BodyslidePreset ){
-		ApplySliderSet(act, get<3>(BodyslidePreset));
+	void OBody::ApplyBodyslidePreset(RE::Actor* act, struct BodyslidePreset preset ){
+		ApplySliderSet(act, preset.sliders, "OBody");
 		//PrintPreset(BodyslidePreset);
 	}
 
-	tuple<string, string, vector<float>, vector<pair<string, pair<float, float>>>> OBody::GeneratePresetFromDoc(pugi::xml_document& doc){
-		pugi::xml_node presetNode = doc.child("SliderPresets").child("Preset");
+	struct SliderSet OBody::GenerateClotheSliders(RE::Actor* act){
+		struct SliderSet set;
 
-		string name = presetNode.attribute("name").value();
-		string body = presetNode.attribute("set").value(); 
-		vector<float> scores; // todo
-		auto sliderset = GenerateSlidersetFromDoc(doc);
+		// breasts
+		// make area on sides behind breasts not sink in
+		AddSliderToSet(set, BuildDerivativeSlider(act, "BreastSideShape", 0.0f));
+		// make area under breasts not sink in
+		AddSliderToSet(set, BuildDerivativeSlider(act, "BreastUnderDepth", 0.0f));
+		// push breasts together
+		AddSliderToSet(set, BuildSlider("BreastCleavage", 0.2f, 0.4f));
+		// push up smaller breasts more
+		AddSliderToSet(set, BuildSlider("BreastGravity2", -0.1f, -0.05f));
+		// Make top of breast rise higher
+		AddSliderToSet(set, BuildSlider("BreastTopSlope", -0.3f, -0.4f));
+		// push breasts together
+		AddSliderToSet(set, BuildSlider("BreastsTogether", 0.2f, 0.25f));
+
+		// butt 
+		// remove butt impressions
+		AddSliderToSet(set, BuildDerivativeSlider(act, "ButtDimples", 0.0f));
+		AddSliderToSet(set, BuildDerivativeSlider(act, "ButtUnderFold", 0.0f));
+
+		// Torso
+		// remove definition on clavical bone
+		AddSliderToSet(set, BuildDerivativeSlider(act, "Clavicle_v2", 0.0f));
+		// Make navel sink in more? Change?
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NavelEven", 0.0f));
 
 
-		return make_tuple(name, body, scores, sliderset);
+		// hip
+		// remove defintion on hip bone
+		AddSliderToSet(set, BuildDerivativeSlider(act, "HipCarved", 0.0f));
+
+		// nipple
+		// sublte change to tip shape
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NippleDip", 0.0f));
+		//flatten areola 
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NipplePuffy_v2", 0.0f));
+		AddSliderToSet(set, BuildSlider("NipBGone", 0.6f));
+		// push nipples together
+		AddSliderToSet(set, BuildSlider("NippleDistance", 0.05f, 0.08f));
+		// Lift large breasts up
+		AddSliderToSet(set, BuildSlider("NippleDown", 0.0f, -0.1f));
+		// Less pointy nipple
+		AddSliderToSet(set, BuildSlider("NipplePerkManga", -0.15f));
+
+
+		return set;
 	}
 
-	vector<pair<string, pair<float, float>>> OBody::GenerateSlidersetFromDoc(pugi::xml_document& doc){
-		vector<pair<string, pair<float, float>>> ret;
 
-		pugi::xml_node tools = doc.child("SliderPresets").child("Preset");
+	struct BodyslidePreset OBody::GenerateSinglePresetFromFile(string file){
+		return GeneratePresetsFromFile(file)[0];
+	}
 
-    	for (pugi::xml_node_iterator it = tools.begin(); it != tools.end(); ++it)
+	void OBody::GenBodyByFile(RE::Actor* act, string path){
+		logger::info("Path: {}", path);
+		GenerateFullBodyFromPreset(act, GenerateSinglePresetFromFile(path));
+	}	
+
+	vector<struct BodyslidePreset> OBody::GeneratePresetsFromFile(string file){
+		auto doc = GetDocFromFile(file);
+		return GeneratePresetsFromDoc(doc);
+	}
+
+	vector<struct BodyslidePreset> OBody::GeneratePresetsFromDoc(pugi::xml_document& doc){
+		pugi::xml_node presetNode = doc.child("SliderPresets");
+
+		vector<struct BodyslidePreset> ret;
+
+		for (pugi::xml_node_iterator it = presetNode.begin(); it != presetNode.end(); ++it){
+			ret.push_back(GeneratePresetFromNode((*it)));
+		}
+
+		return ret;
+
+		
+	}
+
+	struct BodyslidePreset OBody::GeneratePresetFromNode(pugi::xml_node node){
+		string name = node.attribute("name").value();
+		string body = node.attribute("set").value(); 
+		vector<float> scores; // todo
+		auto sliderset = GenerateSlidersetFromNode(node);
+
+		struct BodyslidePreset ret;
+		ret.name = name;
+		ret.body = body;
+		ret.scores = scores;
+		ret.sliders = sliderset; 
+
+		return ret;
+
+	}
+
+	struct SliderSet OBody::GenerateSlidersetFromNode(pugi::xml_node& node){
+		struct SliderSet ret; 
+
+
+    	for (pugi::xml_node_iterator it = node.begin(); it != node.end(); ++it)
     	{
 
     		//logger::info("Name: {}", it->name());
@@ -177,56 +275,56 @@ namespace Body{
 		return ret;
 	}
 
-	void OBody::AddSliderToSet(vector<pair<string, pair<float, float>>>& sliderset, pair<string, pair<float, float>> slider){
-		if ( !sliderset.empty() &&( strcmp(sliderset.back().first.c_str(), slider.first.c_str()) == 0 )){
+	void OBody::AddSliderToSet(struct SliderSet& sliderset, struct Slider slider){
+		if ( !sliderset.sliders.empty() &&( strcmp(sliderset.sliders.back().name.c_str(), slider.name.c_str()) == 0 )){
 			// merge
-			if ((sliderset.back().second.first == 0.0f) && (slider.second.first != 0.0f)){
+			if ((sliderset.sliders.back().min == 0.0f) && (slider.min != 0.0f)){
 				// fill in small
-				sliderset.back().second.first = slider.second.first;
-			} else if((sliderset.back().second.second == 0.0f) && (slider.second.second != 0.0f)){
+				sliderset.sliders.back().min = slider.min;
+			} else if((sliderset.sliders.back().max == 0.0f) && (slider.max != 0.0f)){
 				//fill in large
-				sliderset.back().second.second = slider.second.second;
+				sliderset.sliders.back().max = slider.max;
 			}
 		} else{
-			sliderset.push_back(slider);
+			sliderset.sliders.push_back(slider);
 		}
 		
 		
 	}
 
-	pair<string, pair<float, float>> OBody::BuildSlider(string name, float min, float max){
-		pair<float, float> set;
-		set.first = min;
-		set.second = max;
+	struct Slider OBody::BuildSlider(string name, float min, float max){
+		struct Slider ret = {name, min, max};
 
-		pair<string, pair<float, float>> slider;
-		slider.first = name;
-		slider.second = set;
-
-		return slider;
+		return ret;
 	}
 
-	pair<string, pair<float, float>> OBody::BuildSlider(string name, float value){
+	struct Slider OBody::BuildSlider(string name, float value){
 		return BuildSlider(name, value, value);
 	}
 
-	void OBody::PrintPreset(tuple<string, string, vector<float>, vector<pair<string, pair<float, float>>>>& sliderset){
-		logger::info(">Preset name: {}", get<0>(sliderset));
-		logger::info(">Preset Body: {}", get<1>(sliderset));
-		// todo scores
-		PrintSliderSet(get<3>(sliderset));
+	struct Slider OBody::BuildDerivativeSlider(RE::Actor* act, string morph, float target){
+		return BuildSlider(morph, target - GetMorph(act, morph));
 	}
 
-	void OBody::PrintSliderSet(vector<pair<string, pair<float, float>>>& sliderset){
-		for (auto i = sliderset.begin(); i != sliderset.end(); ++i){
+	
+	void OBody::PrintPreset(struct BodyslidePreset preset){
+		logger::info(">Preset name: {}", preset.name);
+		logger::info(">Preset Body: {}", preset.body);
+		// todo scores
+		PrintSliderSet(preset.sliders);
+	}
+
+	void OBody::PrintSliderSet(struct SliderSet set){
+		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i){
         	auto slider = (*i);
 
-        	logger::info(">    Slider name: {}", slider.first);
-        	logger::info(">        Small value: {}", slider.second.first);
-        	logger::info(">        Large value: {}", slider.second.second);
+        	logger::info(">    Slider name: {}", slider.name);
+        	logger::info(">        Small value: {}", slider.min);
+        	logger::info(">        Large value: {}", slider.max);
         }
         	
 	}
+	
 
 	pugi::xml_document OBody::GetDocFromFile(string pathToFile){
 		pugi::xml_document doc;
@@ -242,13 +340,13 @@ namespace Body{
 		std::string path = "Data\\CalienteTools\\BodySlide\\SliderPresets\\";
    		for (const auto & entry : fs::directory_iterator(path)){
    			string stringpath = entry.path().string();
-   			if (StringContains(stringpath, "Outfit") || StringContains(stringpath, "outfit") || StringContains(stringpath, "OUTFIT") || !StringContains(stringpath, "xml")){
+   			if (IsClothedSet(stringpath) || !StringContains(stringpath, "xml")){
    				//
    				
    			} else{
    				
         		Files.push_back(stringpath);
-        		logger::info(stringpath.c_str());
+        		//logger::info(stringpath.c_str());
    			}
         		
         }
@@ -258,7 +356,63 @@ namespace Body{
 	}
 
 	void OBody::GenerateDatabases(){
-		GetFilesInBodyslideDir();
+		vector<string> files = GetFilesInBodyslideDir();
+
+		vector<struct BodyslidePreset> presets;
+		for (auto i = files.begin(); i != files.end(); ++i){
+			presets = GeneratePresetsFromFile(*i);
+
+			if (IsFemalePreset(presets[0])){
+				AddPresetToDatabase(FemalePresets, presets);
+			} else{
+				AddPresetToDatabase(MalePresets, presets);
+			}
+        	
+        }
+
+
+        logger::info("Female presets loaded: {}", FemalePresets.presets.size());
+        logger::info("Male presets loaded: {}", MalePresets.presets.size());
+
+
+	}
+
+	bool OBody::IsFemalePreset(struct BodyslidePreset& preset){
+		return !( StringContains(preset.body, "HIMBO") || StringContains(preset.body, "himbo") || StringContains(preset.body, "Himbo") );
+	}
+
+	struct BodyslidePreset OBody::GetRandomElementOfDatabase(struct PresetDatabase& database){
+  		random_device seed ;
+   		// generator 
+  		std::mt19937 engine( seed( ) ) ;
+   		// number distribution
+   		uniform_int_distribution<int> choose( 0 , (int)database.presets.size( ) - 1 ) ;
+   		
+   		return database.presets[ choose( engine ) ];
+	}
+
+	bool OBody::IsClothedSet(string set){
+		return (StringContains(set, "Outfit") || StringContains(set, "outfit") || StringContains(set, "OUTFIT") || StringContains(set, "Clothed") || StringContains(set, "CLOTHED") || StringContains(set, "clothed"));
+	}
+
+	bool OBody::IsFemale(RE::Actor* act){
+		return act->GetActorBase()->GetSex() == 1;
+	}
+
+	void OBody::AddPresetToDatabase(struct PresetDatabase& database, struct BodyslidePreset preset){
+		if (IsClothedSet(preset.name)) {
+			// do not add
+		} else {
+			database.presets.push_back(preset);
+			logger::info("Adding preset: {}", preset.name);
+		}
+		
+
+	}
+
+	void OBody::AddPresetToDatabase(struct PresetDatabase& database, vector<struct BodyslidePreset> presets){
+		for (auto i = presets.begin(); i != presets.end(); ++i)
+        	AddPresetToDatabase(database, *i);
 	}
 
 	bool OBody::StringContains(string& str, const char* testcase){
