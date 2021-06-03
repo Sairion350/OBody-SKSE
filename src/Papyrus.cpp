@@ -17,6 +17,12 @@ namespace Papyrus
 		OBodyinstance->GenerateActorBody(act);
 	}
 
+	void ApplyPresetByFile(RE::StaticFunctionTag*, RE::Actor* act, RE::BSFixedString path)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		OBodyinstance->GenBodyByFile(act, (std::string) path );
+	}
+
 	RE::FormID GetRandomFemaleFormID(RE::StaticFunctionTag*)
 	{
 		auto actors = Body::Actors::GetSingleton();
@@ -179,6 +185,7 @@ namespace Papyrus
 		const auto obj = "OBodyNative"sv;
 
 		BIND(GenActor);
+		BIND(ApplyPresetByFile);
 
 		BIND(IsPrefiltered);
 		BIND(PreFilterActors);
