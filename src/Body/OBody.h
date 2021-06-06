@@ -19,6 +19,8 @@ namespace Body
 		bool GameLoaded;
 
 		void SetLoaded(bool a);
+		float GetBreastScore(struct SliderSet sliders, bool max);
+
 		vector<string> GetFilesInBodyslideDir();
 		void GenerateDatabases();
 		bool StringContains(string& str, const char* testcase);
@@ -62,8 +64,25 @@ namespace Body
 		void PrintSliderSet(struct SliderSet set);
 		void PrintPreset(struct BodyslidePreset preset);
 
+		void ApplyClothePreset(RE::Actor* act);
+		void ProcessActorEquipEvent(RE::Actor* act, bool RemovingBodyArmor);
+
+		bool IsProcessed(RE::Actor* act);
+
 		bool IsClothedSet(string set);
 		bool IsFemale(RE::Actor* act);
+
+		bool IsNaked(RE::Actor* act);
+
+		bool HasActiveClothePreset(RE::Actor* act);
+		vector<RE::BSFixedString> GetPresets(RE::Actor* act);
+		void RemoveClothePreset(RE::Actor* act);
+		struct BodyslidePreset GetPresetByName(struct PresetDatabase& database, string name);
+		void GenBodyByName(RE::Actor* act, string PresetName);
+		int GetSliderScore(struct BodypartScoreset& scoreset, string slidername);
+
+		float GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max);
+		float GetButtScore(struct SliderSet sliders, bool max);
 
 
 	private:
@@ -73,6 +92,8 @@ namespace Body
 		~OBody() = default;
 
 		SKEE::IBodyMorphInterface* morphInt;
+
+
 
 
 	};

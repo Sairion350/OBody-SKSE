@@ -23,6 +23,24 @@ namespace Papyrus
 		OBodyinstance->GenBodyByFile(act, (std::string) path );
 	}
 
+	void ApplyPresetByName(RE::StaticFunctionTag*, RE::Actor* act, RE::BSFixedString name)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		OBodyinstance->GenBodyByName(act, (std::string) name );
+	}
+
+	void AddClothesOverlay(RE::StaticFunctionTag*, RE::Actor* act)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		OBodyinstance->ApplyClothePreset(act);
+		OBodyinstance->ApplyMorphs(act);
+	}
+
+	auto GetAllPossiblePresets(RE::StaticFunctionTag*, RE::Actor* act){
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->GetPresets(act);
+	}
+
 	RE::FormID GetRandomFemaleFormID(RE::StaticFunctionTag*)
 	{
 		auto actors = Body::Actors::GetSingleton();
@@ -186,6 +204,9 @@ namespace Papyrus
 
 		BIND(GenActor);
 		BIND(ApplyPresetByFile);
+		BIND(ApplyPresetByName);
+		BIND(GetAllPossiblePresets);
+		BIND(AddClothesOverlay);
 
 		BIND(IsPrefiltered);
 		BIND(PreFilterActors);
