@@ -17,7 +17,7 @@ namespace Body{
 	{
 		string name;
 		string body;
-		vector<float> scores;
+		vector<struct ScoreSet> scores;
 		struct SliderSet sliders;
 	};
 	struct Slider
@@ -30,10 +30,80 @@ namespace Body{
 	{
 		vector<struct BodyslidePreset> presets;
 	};
+	struct ScoreSet
+	{
+		string name;
+		float MinScore; // 100 = large?
+		float MaxScore;
+	};
+	struct BodysliderSliderScore
+	{
+		string name;
+		int score;
+	};
+	struct BodypartScoreset
+	{
+		vector<struct BodysliderSliderScore> scores;
+	};
+
+	
 
 
 	struct PresetDatabase FemalePresets;
 	struct PresetDatabase MalePresets;
+
+	struct BodypartScoreset BreastScores;
+	struct BodypartScoreset ButtScores;
+
+
+	float OBody::GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max){
+		//PrintSliderSet(sliders);
+
+		float ret = 1.0f;
+		for (auto i = sliders.sliders.begin(); i != sliders.sliders.end(); ++i){
+			struct Slider slider = (*i);
+
+			float mult;
+			string name = slider.name;
+			if (max){
+				mult = slider.max;
+			} else {
+				mult = slider.min;
+			}
+
+			int val = GetSliderScore(bodypartSet, slider.name);
+
+			//logger::info("Trying: {}", slider.name);
+
+			ret = ret + (((float) val) * mult);
+		}
+
+		//logger::info("Final score: {}", ret);
+		return ret;
+	}
+
+	float OBody::GetBreastScore(struct SliderSet sliders, bool max){
+		return GetBodypartScore(BreastScores, sliders, max);
+	}
+
+	float OBody::GetButtScore(struct SliderSet sliders, bool max){
+		return GetBodypartScore(ButtScores, sliders, max);
+	}
+
+	int OBody::GetSliderScore(struct BodypartScoreset& scoreset, string slidername){
+		for (auto i = scoreset.scores.begin(); i != scoreset.scores.end(); ++i){
+			auto slider = (*i);
+
+			if (strcmp(slider.name.c_str(), slidername.c_str()) == 0){
+			//	logger::info("Name: {}", slider.name);
+			//	logger::info("Score: {}", slider.score);
+				return slider.score;
+			}
+		}
+
+		return 0;
+
+	}
 
 	const fs::path root_path("Data\\CalienteTools\\BodySlide\\SliderPresets");
 
@@ -57,7 +127,7 @@ namespace Body{
 		//logger::info("Has: {}", GetMorph(act, "obody_processed"));
 		//if (morphInt->HasBodyMorphKey(act, key)){
 
-		if (GetMorph(act, "obody_processed") == 1.0f){
+		if (IsProcessed(act)){
 			// ignore, already set
 			logger::info("Skipping: {}", act->GetName());
 		} else{
@@ -68,6 +138,27 @@ namespace Body{
 		}
 		
 
+	}
+
+	bool OBody::IsProcessed(RE::Actor* act){
+		return GetMorph(act, "obody_processed") == 1.0f;
+	}
+
+	void OBody::ProcessActorEquipEvent(RE::Actor* act, bool RemovingBodyArmor){	
+		if (!IsProcessed(act)){
+			return;
+		}
+	
+
+		if (HasActiveClothePreset(act) && (IsNaked(act) || RemovingBodyArmor)){
+			logger::info("Removing clothe preset");
+			RemoveClothePreset(act);
+			ApplyMorphs(act);
+		} else if(!HasActiveClothePreset(act) && !IsNaked(act)){
+			logger::info("adding clothe preset");
+			ApplyClothePreset(act);
+			ApplyMorphs(act);
+		}
 	}
 
 	bool OBody::SetMorphInterface(SKEE::IBodyMorphInterface* a_morphInt)
@@ -91,19 +182,53 @@ namespace Body{
 	}
 
 	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, struct BodyslidePreset preset){
+		morphInt->ClearBodyMorphKeys(act, "OClothe");
+		morphInt->ClearBodyMorphKeys(act, "OBody");
+
 		ApplyBodyslidePreset(act, preset);
 
 		logger::info("    Applying preset: {}", preset.name);
 
-		auto clotheSet = GenerateClotheSliders(act);
+		
 
-		//PrintSliderSet(clotheSet);
-		ApplySliderSet(act, clotheSet, "OClothe");
+		if (!IsNaked(act)) {
+			logger::info("Not naked, adding cloth preset");
+			ApplyClothePreset(act);
+		}
 
 		ApplyMorphs(act);
 
 
 		SetMorph(act, "obody_processed", 1.0f, "OBody");
+	}
+
+	bool OBody::HasActiveClothePreset(RE::Actor* act){
+		return morphInt->HasBodyMorphKey(act, "OClothe");
+	}
+
+	void OBody::RemoveClothePreset(RE::Actor* act){
+		morphInt->ClearBodyMorphKeys(act, "OClothe");
+	}
+
+	void OBody::ApplyClothePreset(RE::Actor* act){
+		auto clotheSet = GenerateClotheSliders(act);
+
+		//PrintSliderSet(clotheSet);
+
+		ApplySliderSet(act, clotheSet, "OClothe");
+	}
+
+	bool OBody::IsNaked(RE::Actor* act){
+		auto* changes = act->GetInventoryChanges();
+		auto* const armor = changes->GetArmorInSlot(32);
+
+		
+		if (armor){
+			return false;
+		} else {
+			return true;
+		}
+
 	}
 
 	void OBody::SetMorph(RE::Actor* act, string MorphName, float value, string key){
@@ -143,24 +268,35 @@ namespace Body{
 		// make area under breasts not sink in
 		AddSliderToSet(set, BuildDerivativeSlider(act, "BreastUnderDepth", 0.0f));
 		// push breasts together
-		AddSliderToSet(set, BuildSlider("BreastCleavage", 0.2f, 0.4f));
+		AddSliderToSet(set, BuildDerivativeSlider(act, "BreastCleavage", 1.0f));
 		// push up smaller breasts more
 		AddSliderToSet(set, BuildSlider("BreastGravity2", -0.1f, -0.05f));
 		// Make top of breast rise higher
-		AddSliderToSet(set, BuildSlider("BreastTopSlope", -0.3f, -0.4f));
+		AddSliderToSet(set, BuildSlider("BreastTopSlope", -0.2f, -0.35f));
 		// push breasts together
-		AddSliderToSet(set, BuildSlider("BreastsTogether", 0.2f, 0.25f));
+		AddSliderToSet(set, BuildSlider("BreastsTogether", 0.3f, 0.35f));
+		// push breasts up
+		//AddSliderToSet(set, BuildSlider("PushUp", 0.6f, 0.4f));
+		// Shrink breasts slightly
+		AddSliderToSet(set, BuildSlider("Breasts", -0.05f));
+		// Move breasts up on body slightly
+		AddSliderToSet(set, BuildSlider("BreastHeight", 0.15f));
+		// Fix "sock" chest
+		//AddSliderToSet(set, BuildSlider("BreastsConverage_v2", 0.00f, 0.35f));
 
 		// butt 
 		// remove butt impressions
 		AddSliderToSet(set, BuildDerivativeSlider(act, "ButtDimples", 0.0f));
 		AddSliderToSet(set, BuildDerivativeSlider(act, "ButtUnderFold", 0.0f));
+		// shrink ass slightly
+		AddSliderToSet(set, BuildSlider("AppleCheeks", -0.05f));
+		AddSliderToSet(set, BuildSlider("Butt", -0.05f));
 
 		// Torso
 		// remove definition on clavical bone
 		AddSliderToSet(set, BuildDerivativeSlider(act, "Clavicle_v2", 0.0f));
-		// Make navel sink in more? Change?
-		AddSliderToSet(set, BuildDerivativeSlider(act, "NavelEven", 0.0f));
+		// Push out navel
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NavelEven", 1.0f));
 
 
 		// hip
@@ -170,20 +306,72 @@ namespace Body{
 		// nipple
 		// sublte change to tip shape
 		AddSliderToSet(set, BuildDerivativeSlider(act, "NippleDip", 0.0f));
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NippleTip", 0.0f));
 		//flatten areola 
 		AddSliderToSet(set, BuildDerivativeSlider(act, "NipplePuffy_v2", 0.0f));
-		AddSliderToSet(set, BuildSlider("NipBGone", 0.6f));
+		// shrink areola
+		AddSliderToSet(set, BuildDerivativeSlider(act, "AreolaSize", -0.3f));
+		// flatten nipple
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NipBGone", 1.0f));
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NippleManga", -0.75f));
 		// push nipples together
 		AddSliderToSet(set, BuildSlider("NippleDistance", 0.05f, 0.08f));
 		// Lift large breasts up
 		AddSliderToSet(set, BuildSlider("NippleDown", 0.0f, -0.1f));
-		// Less pointy nipple
-		AddSliderToSet(set, BuildSlider("NipplePerkManga", -0.15f));
+		// Flatten nipple + areola 
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NipplePerkManga", -0.25f));
+		// Flatten nipple
+		AddSliderToSet(set, BuildDerivativeSlider(act, "NipplePerkiness", 0.0f));
 
 
 		return set;
 	}
 
+
+	vector<RE::BSFixedString> OBody::GetPresets(RE::Actor* act){
+		vector<RE::BSFixedString> ret;
+		struct PresetDatabase& base = FemalePresets;
+
+		if (!IsFemale(act)){
+			base = MalePresets;
+		}
+
+		for (auto i = base.presets.begin(); i != base.presets.end(); ++i){
+        	auto preset = (*i);
+        	ret.push_back(preset.name);
+
+        }
+
+        return ret;
+	}
+
+	struct BodyslidePreset OBody::GetPresetByName(struct PresetDatabase& database, string name){
+		for (auto i = database.presets.begin(); i != database.presets.end(); ++i){
+        	auto preset = (*i);
+        	if (strcmp(preset.name.c_str(), name.c_str()) == 0){
+        		return preset;
+        	}
+
+        }
+
+        return database.presets[0];
+
+	}
+
+	void OBody::GenBodyByName(RE::Actor* act, string PresetName){
+		// do not send this an invalid name, you have been warned
+		struct BodyslidePreset preset;
+
+		if (IsFemale(act)){
+			preset = GetPresetByName(FemalePresets, PresetName);
+		} else {
+			preset = GetPresetByName(MalePresets, PresetName);
+		}
+
+		//if (preset != null){
+			GenerateFullBodyFromPreset(act, preset);
+		//}
+	}
 
 	struct BodyslidePreset OBody::GenerateSinglePresetFromFile(string file){
 		return GeneratePresetsFromFile(file)[0];
@@ -216,14 +404,31 @@ namespace Body{
 	struct BodyslidePreset OBody::GeneratePresetFromNode(pugi::xml_node node){
 		string name = node.attribute("name").value();
 		string body = node.attribute("set").value(); 
-		vector<float> scores; // todo
 		auto sliderset = GenerateSlidersetFromNode(node);
+		vector<struct ScoreSet> scores; // todo
+
+		struct ScoreSet breasts;
+		breasts.name = "breasts";
+		breasts.MinScore = GetBreastScore(sliderset, false);
+		breasts.MaxScore = GetBreastScore(sliderset, true);
+
+		struct ScoreSet butt;
+		butt.name = "butt";
+		butt.MinScore = GetButtScore(sliderset, false);
+		butt.MaxScore = GetButtScore(sliderset, true);
+
+		scores.push_back(breasts);
+		scores.push_back(butt);
 
 		struct BodyslidePreset ret;
 		ret.name = name;
 		ret.body = body;
 		ret.scores = scores;
 		ret.sliders = sliderset; 
+
+		PrintPreset(ret);
+		//PrintSliderSet(sliderset);
+
 
 		return ret;
 
@@ -310,8 +515,15 @@ namespace Body{
 	void OBody::PrintPreset(struct BodyslidePreset preset){
 		logger::info(">Preset name: {}", preset.name);
 		logger::info(">Preset Body: {}", preset.body);
-		// todo scores
-		PrintSliderSet(preset.sliders);
+		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
+			auto score = (*i);
+			logger::info("> Score: {}", score.name);
+
+			logger::info(">  Minimum score: {}", score.MinScore);
+			logger::info(">  Maximum score: {}", score.MaxScore);
+
+		}
+		//PrintSliderSet(preset.sliders);
 	}
 
 	void OBody::PrintSliderSet(struct SliderSet set){
@@ -356,6 +568,44 @@ namespace Body{
 	}
 
 	void OBody::GenerateDatabases(){
+		// Generate scores
+
+
+		// breasts (cbbe)
+        BreastScores.scores.push_back({"DoubleMelon", 30});
+        BreastScores.scores.push_back({"BreastsFantasy", 28});
+        BreastScores.scores.push_back({"Breasts", 25});
+        BreastScores.scores.push_back({"BreastsNewSH", 45});
+
+        BreastScores.scores.push_back({"BreastFlatness", -30});
+        BreastScores.scores.push_back({"BreastFlatness2", -30});
+
+        BreastScores.scores.push_back({"BreastsSmall", -15});
+        BreastScores.scores.push_back({"BreastsSmall2", -15});
+        BreastScores.scores.push_back({"BreastsGone", -25});
+
+        BreastScores.scores.push_back({"BreastPerkiness", -10});
+
+        BreastScores.scores.push_back({"OldBaseShape", 33});
+        BreastScores.scores.push_back({"7B Upper", 50});
+        BreastScores.scores.push_back({"VanillaSSEHi", 20});
+        BreastScores.scores.push_back({"VanillaSSELo", -10});
+
+        // butt (cbbe)
+        ButtScores.scores.push_back({"AppleCheeks", 30});
+        ButtScores.scores.push_back({"BigButt", 20});
+        ButtScores.scores.push_back({"ChubbyButt", 20});
+        ButtScores.scores.push_back({"Butt", 15});
+        ButtScores.scores.push_back({"ButtSaggy_v2", 5});
+        ButtScores.scores.push_back({"ButtShape2", 5});
+        ButtScores.scores.push_back({"RoundAss", 7});
+        BreastScores.scores.push_back({"7B Lower", 15});
+
+        ButtScores.scores.push_back({"ButtSmall", -5});
+        ButtScores.scores.push_back({"ButtPressed_v2", -10});
+
+
+
 		vector<string> files = GetFilesInBodyslideDir();
 
 		vector<struct BodyslidePreset> presets;
@@ -375,10 +625,13 @@ namespace Body{
         logger::info("Male presets loaded: {}", MalePresets.presets.size());
 
 
+        
+
+
 	}
 
 	bool OBody::IsFemalePreset(struct BodyslidePreset& preset){
-		return !( StringContains(preset.body, "HIMBO") || StringContains(preset.body, "himbo") || StringContains(preset.body, "Himbo") );
+		return !( StringContains(preset.body, "HIMBO") || StringContains(preset.body, "himbo") || StringContains(preset.body, "Himbo") || StringContains(preset.body, "Talos") || StringContains(preset.body, "talos") || StringContains(preset.body, "TALOS") );
 	}
 
 	struct BodyslidePreset OBody::GetRandomElementOfDatabase(struct PresetDatabase& database){
@@ -392,7 +645,7 @@ namespace Body{
 	}
 
 	bool OBody::IsClothedSet(string set){
-		return (StringContains(set, "Outfit") || StringContains(set, "outfit") || StringContains(set, "OUTFIT") || StringContains(set, "Clothed") || StringContains(set, "CLOTHED") || StringContains(set, "clothed"));
+		return (StringContains(set, "Outfit") || StringContains(set, "outfit") || StringContains(set, "OUTFIT") || StringContains(set, "Cloth") || StringContains(set, "CLOTH") || StringContains(set, "cloth"));
 	}
 
 	bool OBody::IsFemale(RE::Actor* act){

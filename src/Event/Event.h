@@ -156,6 +156,35 @@ namespace Event
 
 			if (form->Is(RE::FormType::Armor) || form->Is(RE::FormType::Armature)) {
 				//Update(actor->GetFormID());
+
+				auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
+				auto keywordNPC = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordNPC);
+
+				if (actor->HasKeyword(keywordNPC)){
+					//logger::info("Processing equipment {} ", actor->GetName());
+
+					bool removingBody = false;
+
+					if (!a_event->equipped){
+						logger::info("Not equipped");
+						auto* changes = actor->GetInventoryChanges();
+						
+						auto* const armor = changes->GetArmorInSlot(32);
+
+						if (armor){
+							removingBody = (armor->formID == form->formID);
+						} else {
+							logger::info("armor not found");
+							removingBody = true;
+						}
+						
+						
+					}
+
+
+					auto OBodyinstance = Body::OBody::GetInstance();
+					OBodyinstance->ProcessActorEquipEvent(actor, removingBody);
+				}
 			}
 
 			return EventResult::kContinue;
