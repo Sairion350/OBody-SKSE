@@ -6,6 +6,9 @@
 
 #include "Body/OBody.h"
 
+inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
+
+
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
