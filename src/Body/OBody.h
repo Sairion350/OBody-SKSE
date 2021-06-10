@@ -83,6 +83,8 @@ namespace Body
 
 		float GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max);
 		float GetButtScore(struct SliderSet sliders, bool max);
+		float GetWaistScore(struct SliderSet sliders, bool max);
+		void RegisterQuestForEvent(RE::TESQuest* quest);
 
 
 	private:

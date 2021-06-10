@@ -5,6 +5,8 @@
 #include "Body/MorphProcedural.h"
 #include "Body/OBody.h"
 
+
+
 namespace Papyrus
 {
 	int32_t femalesFound = 0;
@@ -15,6 +17,14 @@ namespace Papyrus
 	{
 		auto OBodyinstance = Body::OBody::GetInstance();
 		OBodyinstance->GenerateActorBody(act);
+	}
+
+	void RegisterForOBodyEvent(RE::StaticFunctionTag*, RE::TESQuest* quest)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		OBodyinstance->RegisterQuestForEvent(quest);
+
+
 	}
 
 	void ApplyPresetByFile(RE::StaticFunctionTag*, RE::Actor* act, RE::BSFixedString path)
@@ -207,6 +217,7 @@ namespace Papyrus
 		BIND(ApplyPresetByName);
 		BIND(GetAllPossiblePresets);
 		BIND(AddClothesOverlay);
+		BIND(RegisterForOBodyEvent);
 
 		BIND(IsPrefiltered);
 		BIND(PreFilterActors);

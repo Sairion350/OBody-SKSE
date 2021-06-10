@@ -4,6 +4,8 @@
 
 using namespace std;
 
+inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
+
 
 namespace Body{
 
@@ -54,12 +56,13 @@ namespace Body{
 
 	struct BodypartScoreset BreastScores;
 	struct BodypartScoreset ButtScores;
+	struct BodypartScoreset WaistScores;
 
 
 	float OBody::GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max){
 		//PrintSliderSet(sliders);
 
-		float ret = 1.0f;
+		float ret = 0.0f;
 		for (auto i = sliders.sliders.begin(); i != sliders.sliders.end(); ++i){
 			struct Slider slider = (*i);
 
@@ -88,6 +91,10 @@ namespace Body{
 
 	float OBody::GetButtScore(struct SliderSet sliders, bool max){
 		return GetBodypartScore(ButtScores, sliders, max);
+	}
+
+	float OBody::GetWaistScore(struct SliderSet sliders, bool max){
+		return GetBodypartScore(WaistScores, sliders, max);
 	}
 
 	int OBody::GetSliderScore(struct BodypartScoreset& scoreset, string slidername){
@@ -178,6 +185,9 @@ namespace Body{
 		GenerateFullBodyFromPreset(act, preset);
 	
 		SetMorph(act, "obody_processed", 1.0f, "OBody");
+
+		OnActorGenerated.SendEvent(act);
+
 		
 	}
 
@@ -417,8 +427,14 @@ namespace Body{
 		butt.MinScore = GetButtScore(sliderset, false);
 		butt.MaxScore = GetButtScore(sliderset, true);
 
+		struct ScoreSet waist;
+		waist.name = "waist";
+		waist.MinScore = GetWaistScore(sliderset, false);
+		waist.MaxScore = GetWaistScore(sliderset, true);
+
 		scores.push_back(breasts);
 		scores.push_back(butt);
+		scores.push_back(waist);
 
 		struct BodyslidePreset ret;
 		ret.name = name;
@@ -604,7 +620,21 @@ namespace Body{
         ButtScores.scores.push_back({"ButtSmall", -5});
         ButtScores.scores.push_back({"ButtPressed_v2", -10});
 
+        // waist (cbbe)
+        WaistScores.scores.push_back({"BigTorso", 20});
+        WaistScores.scores.push_back({"ChubbyWaist", 30});
+        WaistScores.scores.push_back({"Waist", 12});
+        WaistScores.scores.push_back({"WideWaistLine", 15});
 
+        WaistScores.scores.push_back({"MuscleMoreAbs_v2", 15});
+
+        WaistScores.scores.push_back({"Belly", 2});
+        WaistScores.scores.push_back({"BigBelly", 10});
+
+        WaistScores.scores.push_back({"PregnancyBelly", 50});
+
+        WaistScores.scores.push_back({"7B Lower", 25});
+        WaistScores.scores.push_back({"Vanilla SSE High", 25});
 
 		vector<string> files = GetFilesInBodyslideDir();
 
@@ -671,9 +701,30 @@ namespace Body{
 	bool OBody::StringContains(string& str, const char* testcase){
 		string s = testcase;
 		return (str).find(s) != string::npos;
+
+		/*
+		auto text = str;
+		auto subtext = string(testcase);
+
+		transform(text.begin(), text.end(), text.begin(),
+			[](unsigned char c) { return tolower(c); });
+
+		transform(subtext.begin(), subtext.end(), subtext.begin(),
+			[](unsigned char c) { return tolower(c); });
+
+		auto it = search(text.begin(), text.end(), boyer_moore_searcher(subtext.begin(), subtext.end()));
+		return it != text.end();
+		*/
 	}
 	void OBody::ApplyMorphs(RE::Actor* act){
 		morphInt->ApplyBodyMorphs(act->AsReference(), true);
+	}
+
+
+	void OBody::RegisterQuestForEvent(RE::TESQuest* quest)
+	{
+
+		OnActorGenerated.Register(quest);
 	}
 
 	float OBody::GetWeight(RE::Actor* act){
