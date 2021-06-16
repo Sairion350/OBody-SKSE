@@ -19,6 +19,36 @@ namespace Papyrus
 		OBodyinstance->GenerateActorBody(act);
 	}
 
+	void SetORefit(RE::StaticFunctionTag*, bool enabled)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->SetORefit(enabled);
+	}
+
+	void SetNippleRand(RE::StaticFunctionTag*, bool enabled)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->SetNippleRand(enabled);
+	}
+
+	void SetGenitalRand(RE::StaticFunctionTag*, bool enabled)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->SetGenitalRand(enabled);
+	}
+
+	int GetFemaleDatabaseSize(RE::StaticFunctionTag*)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->GetFemaleDatabaseSize();
+	}
+
+	int GetMaleDatabaseSize(RE::StaticFunctionTag*)
+	{
+		auto OBodyinstance = Body::OBody::GetInstance();
+		return OBodyinstance->GetMaleDatabaseSize();
+	}
+
 	void RegisterForOBodyEvent(RE::StaticFunctionTag*, RE::TESQuest* quest)
 	{
 		auto OBodyinstance = Body::OBody::GetInstance();
@@ -218,6 +248,12 @@ namespace Papyrus
 		BIND(GetAllPossiblePresets);
 		BIND(AddClothesOverlay);
 		BIND(RegisterForOBodyEvent);
+		BIND(GetFemaleDatabaseSize);
+		BIND(GetMaleDatabaseSize);
+
+		BIND(SetORefit);
+		BIND(SetNippleRand);
+		BIND(SetGenitalRand);
 
 		BIND(IsPrefiltered);
 		BIND(PreFilterActors);

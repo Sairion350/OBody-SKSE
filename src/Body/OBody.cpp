@@ -47,9 +47,19 @@ namespace Body{
 	{
 		vector<struct BodysliderSliderScore> scores;
 	};
+	struct RaceStat
+	{
+		string name;
+		string bodypart;
+		int value;
+	};
+	struct RaceStatDatabase
+	{
+		vector<struct RaceStat> races;
+	};
 
 	
-
+	struct RaceStatDatabase RaceStats;
 
 	struct PresetDatabase FemalePresets;
 	struct PresetDatabase MalePresets;
@@ -57,6 +67,10 @@ namespace Body{
 	struct BodypartScoreset BreastScores;
 	struct BodypartScoreset ButtScores;
 	struct BodypartScoreset WaistScores;
+
+
+
+	bool UseRaceStats = true;
 
 
 	float OBody::GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max){
@@ -112,7 +126,18 @@ namespace Body{
 
 	}
 
+	int OBody::GetFemaleDatabaseSize(){
+		return (int)FemalePresets.presets.size();
+	}
+	int OBody::GetMaleDatabaseSize(){
+		return (int)MalePresets.presets.size();
+	}
+
 	const fs::path root_path("Data\\CalienteTools\\BodySlide\\SliderPresets");
+
+	bool set_ORefit = true;
+	bool set_NippleRand = true;
+	bool set_GenitalRand = true;
 
 	OBody* OBody::GetInstance(){
 			static OBody instance;
@@ -122,6 +147,96 @@ namespace Body{
 	void OBody::SetLoaded(bool a){
 		GameLoaded = a;
 	}
+
+	void OBody::SetORefit(bool a){
+		set_ORefit = a;
+	}
+
+	void OBody::SetNippleRand(bool a){
+		set_NippleRand = a;
+	}
+
+	void OBody::SetGenitalRand(bool a){
+		set_GenitalRand = a;
+	}
+
+	struct PresetDatabase OBody::SortPresetDatabaseByRaceStat(struct PresetDatabase& database, struct RaceStat stat){
+		return SortPresetDatabaseByBodypart(database, stat.bodypart);
+	}
+
+	struct PresetDatabase OBody::SortPresetDatabaseByBodypart(struct PresetDatabase& database, string bodypart){
+		struct PresetDatabase ret;
+		auto arr = database.presets;
+
+		int n = (int) arr.size();
+ 
+        // One by one move boundary of unsorted subarray
+        for (int i = 0; i < n-1; i++)
+        {
+            // Find the minimum element in unsorted array
+            int min_idx = i;
+            for (int j = i+1; j < n; j++){
+            	auto j_scoreset = GetScoresetFromPresetByName(arr[j], bodypart);
+            	auto minidx_scoreset = GetScoresetFromPresetByName(arr[min_idx], bodypart);
+
+            	auto j_val = ((j_scoreset.MinScore + j_scoreset.MaxScore) / 2);
+            	auto minidx_val = ((minidx_scoreset.MinScore + minidx_scoreset.MaxScore) / 2);
+                if (j_val < minidx_val)
+                    min_idx = j;
+ 			}
+            // Swap the found minimum element with the first
+            // element
+            auto temp = arr[min_idx];
+            arr[min_idx] = arr[i];
+            arr[i] = temp;
+        }
+
+        ret.presets = arr;
+        return ret;
+
+	}
+
+
+	struct ScoreSet OBody::GetScoresetFromPresetByName(struct BodyslidePreset& preset, string scorename){
+
+		
+
+		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
+			auto score = (*i);
+
+			if (strcmp(score.name.c_str(), scorename.c_str()) == 0){
+				return score;
+			}
+		}
+
+		struct ScoreSet blank;
+
+		return blank;
+	}
+
+/*
+	static bool OBody::comparePresetByScore(const BodyslidePreset &a, const BodyslidePreset &b, string scorename){
+		auto aVal = GetScoresetFromPresetByName(a, scorename);
+		auto bVal = GetScoresetFromPresetByName(b, scorename);
+
+		return ((aVal.MinScore + aVal.MaxScore) / 2) < ((bVal.MinScore + bVal.MaxScore) / 2);
+	}
+
+	static bool OBody::comparePresetByBreastScore(const BodyslidePreset &a, const BodyslidePreset &b){
+		return comparePresetByScore(a, b, "breasts")
+	}
+
+	static bool OBody::comparePresetByButtScore(const BodyslidePreset &a, const BodyslidePreset &b){
+		return comparePresetByScore(a, b, "butt")
+	}
+
+	static bool OBody::comparePresetByWaistScore(const BodyslidePreset &a, const BodyslidePreset &b){
+		return comparePresetByScore(a, b, "waist")
+	}
+
+	
+
+*/
 
 	void OBody::ProcessActor(RE::Actor* act){
 		///morphInt->EvaluateBodyMorphs(act);
@@ -158,11 +273,11 @@ namespace Body{
 	
 
 		if (HasActiveClothePreset(act) && (IsNaked(act) || RemovingBodyArmor)){
-			logger::info("Removing clothe preset");
+			//logger::info("Removing clothe preset");
 			RemoveClothePreset(act);
 			ApplyMorphs(act);
-		} else if(!HasActiveClothePreset(act) && !IsNaked(act)){
-			logger::info("adding clothe preset");
+		} else if(!HasActiveClothePreset(act) && !IsNaked(act) && set_ORefit){
+			//logger::info("adding clothe preset");
 			ApplyClothePreset(act);
 			ApplyMorphs(act);
 		}
@@ -177,12 +292,48 @@ namespace Body{
 		struct BodyslidePreset preset;
 
 		if (IsFemale(act)){
-			preset = GetRandomElementOfDatabase(FemalePresets);
+			if (RaceStats.races.size() > 0){
+				// user is using the XML race feature
+				auto RaceStat = GetCorrespondingRaceStat(act);
+				if (RaceStat.value > -1){
+					auto sortedDB = SortPresetDatabaseByRaceStat(FemalePresets, RaceStat);
+
+					int dbSize = (int)sortedDB.presets.size();
+
+					int StartingPoint = (int) ((dbSize - 1) * (( (float)RaceStat.value ) / 10.0f));
+
+					int range = (dbSize) / 3;
+					int min = StartingPoint - range;
+					int max = StartingPoint + range;
+
+					if (min < 0)
+						min = 0;
+
+					if (max > dbSize - 1)
+						max = dbSize - 1;
+
+					int finalPreset = RandomInt(min, max);
+
+					preset = sortedDB.presets[finalPreset];
+
+
+
+				} else{
+					preset = GetRandomElementOfDatabase(FemalePresets);
+				}
+				
+
+			} else {
+				preset = GetRandomElementOfDatabase(FemalePresets);
+			}
+			
 		} else {
 			preset = GetRandomElementOfDatabase(MalePresets);
 		}
 
+
 		GenerateFullBodyFromPreset(act, preset);
+
 	
 		SetMorph(act, "obody_processed", 1.0f, "OBody");
 
@@ -195,13 +346,32 @@ namespace Body{
 		morphInt->ClearBodyMorphKeys(act, "OClothe");
 		morphInt->ClearBodyMorphKeys(act, "OBody");
 
+		auto weight = GetWeight(act);
+
 		ApplyBodyslidePreset(act, preset);
 
 		logger::info("    Applying preset: {}", preset.name);
 
-		
+		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
+			auto score = (*i);
+			
+			SaveScoreToActor(act, score, weight);
 
-		if (!IsNaked(act)) {
+		}
+
+		if (IsFemale(act)){
+			// random nipples
+			if (set_NippleRand){
+				ApplySliderSet(act, GenerateRandomNippleSliders(), "OBody");
+			}
+
+			// random vagina
+			if (set_GenitalRand){
+				ApplySliderSet(act, GenerateRandomGenitalSliders(), "OBody");
+			}
+		}
+
+		if (!IsNaked(act) && set_ORefit) {
 			logger::info("Not naked, adding cloth preset");
 			ApplyClothePreset(act);
 		}
@@ -241,6 +411,21 @@ namespace Body{
 
 	}
 
+	struct RaceStat OBody::GetCorrespondingRaceStat(RE::Actor* act){
+		struct RaceStat ret;
+		string RaceName = act->GetActorBase()->GetRace()->GetName();
+
+		for (auto i = RaceStats.races.begin(); i != RaceStats.races.end(); ++i){
+			auto stat = (*i);
+
+			if (strcmp(stat.name.c_str(), RaceName.c_str()) == 0){
+				return stat;
+			}
+		}
+
+		return ret;
+	}
+
 	void OBody::SetMorph(RE::Actor* act, string MorphName, float value, string key){
 		morphInt->SetMorph(act->AsReference(), MorphName.c_str(), key.c_str(), value);
 	}
@@ -267,6 +452,218 @@ namespace Body{
 	void OBody::ApplyBodyslidePreset(RE::Actor* act, struct BodyslidePreset preset ){
 		ApplySliderSet(act, preset.sliders, "OBody");
 		//PrintPreset(BodyslidePreset);
+	}
+
+	struct SliderSet OBody::GenerateRandomNippleSliders(){
+		struct SliderSet set;
+
+		if (ChanceRoll(15)){
+			AddSliderToSet(set, BuildSlider("AreolaSize", RandomFloat(-1.0f, 0.0f) ));
+		} else{
+			AddSliderToSet(set, BuildSlider("AreolaSize", RandomFloat(0.0f, 1.0f) ));
+		}
+
+		if (ChanceRoll(75)){
+			AddSliderToSet(set, BuildSlider("AreolaPull_v2", RandomFloat(-0.25f, 1.0f) ));
+		}
+		
+		if (ChanceRoll(15)){
+			AddSliderToSet(set, BuildSlider("NippleLength", RandomFloat(0.2f, 0.3f) ));
+		} else{
+			AddSliderToSet(set, BuildSlider("NippleLength", RandomFloat(0.0f, 0.1f) ));
+		}
+
+		AddSliderToSet(set, BuildSlider("NippleManga", RandomFloat(-0.3f, 0.8f) ));
+
+		if (ChanceRoll(25)){
+			AddSliderToSet(set, BuildSlider("NipplePerkManga", RandomFloat(-0.3f, 1.2f) ));
+		}
+
+		if (ChanceRoll(15)){
+			AddSliderToSet(set, BuildSlider("NipBGone", RandomFloat(0.6f, 1.0f) ));
+		}
+
+		AddSliderToSet(set, BuildSlider("NippleSize", RandomFloat(-0.5f, 0.3f) ));
+
+		AddSliderToSet(set, BuildSlider("NippleDip", RandomFloat(0.0f, 1.0f) ));
+
+		AddSliderToSet(set, BuildSlider("NippleCrease_v2", RandomFloat(-0.4f, 1.0f) ));
+
+		if (ChanceRoll(6)){
+			AddSliderToSet(set, BuildSlider("NipplePuffy_v2", RandomFloat(0.4f, 0.7f) ));
+		}
+
+		if (ChanceRoll(35)){
+			AddSliderToSet(set, BuildSlider("NippleThicc_v2", RandomFloat(0.0f, 0.9f) ));
+		}
+
+		if (ChanceRoll(2)){
+			if (ChanceRoll(50)){
+				AddSliderToSet(set, BuildSlider("NippleInvert_v2", 1.0f ));
+			} else {
+				AddSliderToSet(set, BuildSlider("NippleInvert_v2", RandomFloat(0.65f, 0.8f) ));
+			}
+		}
+
+
+		return set;
+	}
+
+	struct SliderSet OBody::GenerateRandomGenitalSliders(){
+		struct SliderSet set;
+
+		if (ChanceRoll(20)){
+			// innie
+			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(0.95f, 1.1f) ));
+
+			if (ChanceRoll(50)){
+				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.75f, 1.25f) ));
+			}
+
+			if (ChanceRoll(40)){
+				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 1.0f) ));
+			}
+
+			AddSliderToSet(set, BuildSlider("Labiaprotrude", RandomFloat(0.0f, 0.5f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrude2", RandomFloat(0.0f, 0.1f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrudeback", RandomFloat(0.0f, 0.1f) ));
+
+			AddSliderToSet(set, BuildSlider("Labiaspread", 0.0f ));
+
+			AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 0.3f) ));
+
+			AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", 0.0f ));
+			AddSliderToSet(set, BuildSlider("LabiaNeat_v2", 0.0f ));
+
+			AddSliderToSet(set, BuildSlider("VaginaHole", RandomFloat(-0.2f, 0.05f) ));
+
+			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.4f, 0.25f) ));
+
+		} else if (ChanceRoll(75)){
+			//average
+			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(0.4f, 0.75f) ));
+
+			if (ChanceRoll(40)){
+				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.50f, 1.00f) ));
+			}
+
+			if (ChanceRoll(30)){
+				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 0.75f) ));
+			}
+
+			AddSliderToSet(set, BuildSlider("Labiaprotrude", RandomFloat(0.0f, 0.5f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrude2", RandomFloat(0.0f, 0.75f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrudeback", RandomFloat(0.0f, 1.0f) ));
+
+			if (ChanceRoll(50)){
+				AddSliderToSet(set, BuildSlider("Labiaspread", RandomFloat(0.0f, 1.0f) ));
+				AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 0.7f) ));
+				
+				if (ChanceRoll(60)){
+					AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 0.1f) ));
+				}
+			} else {
+				AddSliderToSet(set, BuildSlider("Labiaspread", 0.0f ));
+				AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 0.2f) ));
+				
+				if (ChanceRoll(45)){
+					AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 0.3f) ));
+				}
+			}
+			
+
+
+
+			AddSliderToSet(set, BuildSlider("LabiaNeat_v2", 0.0f ));
+
+			AddSliderToSet(set, BuildSlider("VaginaHole", RandomFloat(-0.2f, 0.40f) ));
+
+			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.2f, 0.25f) ));
+
+
+		} else{
+			//outie
+
+			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(-0.25f, 0.30f) ));
+
+
+			if (ChanceRoll(30)){
+				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.20f, 0.50f) ));
+			}
+
+			if (ChanceRoll(10)){
+				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 0.35f) ));
+			}
+
+			AddSliderToSet(set, BuildSlider("Labiaprotrude", RandomFloat(0.0f, 1.0f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrude2", RandomFloat(0.0f, 1.0f) ));
+			AddSliderToSet(set, BuildSlider("Labiaprotrudeback", RandomFloat(0.0f, 1.0f) ));
+
+			AddSliderToSet(set, BuildSlider("Labiaspread", RandomFloat(0.0f, 1.0f) ));
+
+			AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 1.0f) ));
+
+			AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 1.0f) ));
+
+			if (ChanceRoll(40)){
+				AddSliderToSet(set, BuildSlider("LabiaNeat_v2", RandomFloat(0.0f, 0.25f) ));
+			}
+			
+
+			AddSliderToSet(set, BuildSlider("VaginaHole", RandomFloat(0.0f, 1.0f) ));
+
+			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.4f, 0.25f) ));
+		}
+
+
+
+		AddSliderToSet(set, BuildSlider("Vaginasize", RandomFloat(0.0f, 1.0f) ));
+		AddSliderToSet(set, BuildSlider("ClitSwell_v2", RandomFloat(-0.3f, 1.1f) ));
+		AddSliderToSet(set, BuildSlider("Cutepuffyness", RandomFloat(0.0f, 1.0f) ));
+
+		AddSliderToSet(set, BuildSlider("LabiaTightUp", RandomFloat(0.0f, 1.0f) ));
+
+		if (ChanceRoll(60)){
+			AddSliderToSet(set, BuildSlider("CBPC", RandomFloat(-0.25f, 0.25f) ));
+		} else {
+			AddSliderToSet(set, BuildSlider("CBPC", RandomFloat(0.6f, 1.0f) ));
+		}
+
+
+
+		AddSliderToSet(set, BuildSlider("AnalPosition_v2", RandomFloat(0.0f, 1.0f) ));
+		AddSliderToSet(set, BuildSlider("AnalTexPos_v2", RandomFloat(0.0f, 1.0f) ));
+		AddSliderToSet(set, BuildSlider("AnalTexPosRe_v2", RandomFloat(0.0f, 1.0f) ));
+
+		AddSliderToSet(set, BuildSlider("AnalLoose_v2", -0.1f ));
+
+		return set;
+	}
+
+	
+	float OBody::RandomFloat(float a, float b) {
+		// non-inclusive
+    	float random = ((float) rand()) / (float) RAND_MAX;
+    	float diff = b - a;
+    	float r = random * diff;
+    	return a + r;
+	}
+
+	int OBody::RandomInt(int a, int b) {
+		// non-inclusive
+    	float random = ((float) rand()) / (float) RAND_MAX;
+    	int diff = b - a;
+    	int r = (int) (random * diff);
+    	return a + r;
+	}
+
+	bool OBody::ChanceRoll(int chance) {
+		float roll = RandomFloat(0.0f, 99.0f);
+
+		if (roll <= (float) chance){
+			return true;
+		}
+		return false;
 	}
 
 	struct SliderSet OBody::GenerateClotheSliders(RE::Actor* act){
@@ -415,7 +812,7 @@ namespace Body{
 		string name = node.attribute("name").value();
 		string body = node.attribute("set").value(); 
 		auto sliderset = GenerateSlidersetFromNode(node);
-		vector<struct ScoreSet> scores; // todo
+		vector<struct ScoreSet> scores; 
 
 		struct ScoreSet breasts;
 		breasts.name = "breasts";
@@ -442,7 +839,7 @@ namespace Body{
 		ret.scores = scores;
 		ret.sliders = sliderset; 
 
-		PrintPreset(ret);
+		//PrintPreset(ret);
 		//PrintSliderSet(sliderset);
 
 
@@ -542,6 +939,24 @@ namespace Body{
 		//PrintSliderSet(preset.sliders);
 	}
 
+	void OBody::PrintDatabase(struct PresetDatabase& database){
+		logger::info("Printing database");
+		for (auto i = database.presets.begin(); i != database.presets.end(); ++i){
+			auto preset = (*i);
+			PrintPreset(preset);
+		}
+	}
+
+	float OBody::GetScoreByWeight(struct ScoreSet& score, float& weight){
+		return ((score.MaxScore - score.MinScore) * weight) + score.MinScore;
+	}
+
+	void OBody::SaveScoreToActor(RE::Actor* act, struct ScoreSet& score, float& weight){
+		float val = GetScoreByWeight(score, weight);
+
+		SetMorph(act, "obody_score_" + score.name, val, "OBody");
+	}
+
 	void OBody::PrintSliderSet(struct SliderSet set){
 		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i){
         	auto slider = (*i);
@@ -561,6 +976,37 @@ namespace Body{
 		//logger::info("Loaded: {}", result);
 
 		return doc;
+	}
+
+	void OBody::BuildRaceStatDB(){
+		auto doc = GetDocFromFile("Data\\obody.xml");
+
+		pugi::xml_node SettingNode = doc.child("Enable");
+
+		int val = atoi(SettingNode.attribute("value").value() );
+
+		if (val != 1){
+			logger::info("Racesettings turned off, exiting");
+			return;
+		}
+
+		pugi::xml_node raceNode = doc.child("Races");
+
+		for (pugi::xml_node_iterator it = raceNode.begin(); it != raceNode.end(); ++it){
+			RaceStats.races.push_back(GenerateRaceStatFromNode(*it));
+		}
+	}
+
+	struct RaceStat OBody::GenerateRaceStatFromNode(pugi::xml_node node){
+		struct RaceStat ret;
+
+		ret.name = node.attribute("name").value();
+		ret.bodypart = node.attribute("bodypart").value();
+		ret.value = atoi( node.attribute("value").value() );
+
+		//logger::info("Name: {}", name);
+
+		return ret;
 	}
 
 	vector<string> OBody::GetFilesInBodyslideDir(){
@@ -650,6 +1096,7 @@ namespace Body{
         	
         }
 
+        BuildRaceStatDB();
 
         logger::info("Female presets loaded: {}", FemalePresets.presets.size());
         logger::info("Male presets loaded: {}", MalePresets.presets.size());
@@ -657,6 +1104,7 @@ namespace Body{
 
         
 
+        
 
 	}
 
@@ -718,6 +1166,7 @@ namespace Body{
 	}
 	void OBody::ApplyMorphs(RE::Actor* act){
 		morphInt->ApplyBodyMorphs(act->AsReference(), true);
+		morphInt->UpdateModelWeight(act->AsReference(), false);
 	}
 
 

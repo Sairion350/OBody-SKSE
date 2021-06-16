@@ -16,6 +16,8 @@ namespace Body
 
 		static OBody* GetInstance();
 
+		
+
 		bool GameLoaded;
 
 		void SetLoaded(bool a);
@@ -85,6 +87,32 @@ namespace Body
 		float GetButtScore(struct SliderSet sliders, bool max);
 		float GetWaistScore(struct SliderSet sliders, bool max);
 		void RegisterQuestForEvent(RE::TESQuest* quest);
+		float GetScoreByWeight(struct ScoreSet& score, float& weight);
+		void SaveScoreToActor(RE::Actor* act, struct ScoreSet& score, float& weight);
+		float RandomFloat(float a, float b);
+		struct SliderSet GenerateRandomNippleSliders();
+		bool ChanceRoll(int chance);
+		struct SliderSet GenerateRandomGenitalSliders();
+
+		void BuildRaceStatDB();
+		struct RaceStat GenerateRaceStatFromNode(pugi::xml_node node);
+		struct PresetDatabase SortPresetDatabaseByRaceStat(struct PresetDatabase& database, struct RaceStat stat);
+		bool comparePresetByBreastScore(const BodyslidePreset &a, const BodyslidePreset &b);
+		bool comparePresetByButtScore(const BodyslidePreset &a, const BodyslidePreset &b);
+		bool comparePresetByWaistScore(const BodyslidePreset &a, const BodyslidePreset &b);
+		bool comparePresetByScore(const BodyslidePreset &a, const BodyslidePreset &b, string scorename);
+		struct ScoreSet GetScoresetFromPresetByName(struct BodyslidePreset& preset, string scorename);
+		struct PresetDatabase SortPresetDatabaseByBodypart(struct PresetDatabase& database, string bodypart);
+		void PrintDatabase(struct PresetDatabase& database);
+		int RandomInt(int a, int b);
+		int GetFemaleDatabaseSize();
+		int GetMaleDatabaseSize();
+
+		void SetORefit(bool a);
+		void SetNippleRand(bool a);
+		void SetGenitalRand(bool a);
+
+		struct RaceStat GetCorrespondingRaceStat(RE::Actor* act);
 
 
 	private:
