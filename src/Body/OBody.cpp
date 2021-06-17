@@ -291,7 +291,13 @@ namespace Body{
 	void OBody::GenerateActorBody(RE::Actor* act){
 		struct BodyslidePreset preset;
 
+
 		if (IsFemale(act)){
+			if (GetFemaleDatabaseSize() < 1){
+				SetMorph(act, "obody_processed", 1.0f, "OBody");
+				OnActorGenerated.SendEvent(act);
+				return;
+			}
 			if (RaceStats.races.size() > 0){
 				// user is using the XML race feature
 				auto RaceStat = GetCorrespondingRaceStat(act);
@@ -328,6 +334,11 @@ namespace Body{
 			}
 			
 		} else {
+			if (GetMaleDatabaseSize() < 1){
+				SetMorph(act, "obody_processed", 1.0f, "OBody");
+				OnActorGenerated.SendEvent(act);
+				return;
+			}
 			preset = GetRandomElementOfDatabase(MalePresets);
 		}
 
