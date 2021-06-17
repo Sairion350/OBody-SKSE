@@ -58,7 +58,9 @@ namespace Body
 		void AddPresetToDatabase(struct PresetDatabase& database, struct BodyslidePreset preset);
 		struct BodyslidePreset GetRandomElementOfDatabase(struct PresetDatabase& database);
 		bool IsFemalePreset(struct BodyslidePreset& preset);
-		struct SliderSet GenerateSlidersetFromNode(pugi::xml_node& node);
+		struct SliderSet GenerateSlidersetFromNode(pugi::xml_node& node, int body);
+		int GetBodyType(string body);
+		void AddSliderToSet(struct SliderSet& sliderset, struct Slider slider, bool inverted);
 
 		void AddPresetToDatabase(struct PresetDatabase& database, vector<struct BodyslidePreset> presets);
 		vector<struct BodyslidePreset> GeneratePresetsFromFile(string file);
@@ -78,6 +80,7 @@ namespace Body
 
 		bool HasActiveClothePreset(RE::Actor* act);
 		vector<RE::BSFixedString> GetPresets(RE::Actor* act);
+		bool SliderSetContainsSlider(struct SliderSet& set, string slidername);
 		void RemoveClothePreset(RE::Actor* act);
 		struct BodyslidePreset GetPresetByName(struct PresetDatabase& database, string name);
 		void GenBodyByName(RE::Actor* act, string PresetName);
@@ -111,6 +114,8 @@ namespace Body
 		void SetORefit(bool a);
 		void SetNippleRand(bool a);
 		void SetGenitalRand(bool a);
+
+
 
 		struct RaceStat GetCorrespondingRaceStat(RE::Actor* act);
 

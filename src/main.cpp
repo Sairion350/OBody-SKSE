@@ -58,7 +58,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	log->flush_on(spdlog::level::info);
 
 	spdlog::set_default_logger(std::move(log));
-	spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
+	spdlog::set_pattern("OBody: [%^%l%$] %v"s);
 
 	logger::info("OBody v{}"sv, Version::NAME);
 
