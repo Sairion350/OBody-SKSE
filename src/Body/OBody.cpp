@@ -9,7 +9,7 @@ inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
 
 namespace Body{
 
-	
+	vector<string> oneDefaultSliders;
 	
 	struct SliderSet
 	{
@@ -343,8 +343,9 @@ namespace Body{
 	}
 
 	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, struct BodyslidePreset preset){
-		morphInt->ClearBodyMorphKeys(act, "OClothe");
-		morphInt->ClearBodyMorphKeys(act, "OBody");
+		//morphInt->ClearBodyMorphKeys(act, "OClothe");
+		//morphInt->ClearBodyMorphKeys(act, "OBody");
+		morphInt->ClearMorphs(act);
 
 		auto weight = GetWeight(act);
 
@@ -427,10 +428,13 @@ namespace Body{
 	}
 
 	void OBody::SetMorph(RE::Actor* act, string MorphName, float value, string key){
+		//logger::info(">> Setting morph: {}", MorphName);
+		//logger::info(">>  With morph value: {}", value);
 		morphInt->SetMorph(act->AsReference(), MorphName.c_str(), key.c_str(), value);
 	}
 
 	float OBody::GetMorph(RE::Actor* act, string MorphName){
+
 		return morphInt->GetMorph(act->AsReference(), MorphName.c_str(), "OBody");
 	}
 
@@ -451,7 +455,7 @@ namespace Body{
 
 	void OBody::ApplyBodyslidePreset(RE::Actor* act, struct BodyslidePreset preset ){
 		ApplySliderSet(act, preset.sliders, "OBody");
-		//PrintPreset(BodyslidePreset);
+		//PrintPreset(preset);
 	}
 
 	struct SliderSet OBody::GenerateRandomNippleSliders(){
@@ -737,7 +741,7 @@ namespace Body{
 
 	vector<RE::BSFixedString> OBody::GetPresets(RE::Actor* act){
 		vector<RE::BSFixedString> ret;
-		struct PresetDatabase& base = FemalePresets;
+		struct PresetDatabase base = FemalePresets;
 
 		if (!IsFemale(act)){
 			base = MalePresets;
@@ -811,7 +815,7 @@ namespace Body{
 	struct BodyslidePreset OBody::GeneratePresetFromNode(pugi::xml_node node){
 		string name = node.attribute("name").value();
 		string body = node.attribute("set").value(); 
-		auto sliderset = GenerateSlidersetFromNode(node);
+		auto sliderset = GenerateSlidersetFromNode(node, GetBodyType(body));
 		vector<struct ScoreSet> scores; 
 
 		struct ScoreSet breasts;
@@ -847,7 +851,10 @@ namespace Body{
 
 	}
 
-	struct SliderSet OBody::GenerateSlidersetFromNode(pugi::xml_node& node){
+	// 0 - cbbe
+	// 1 - unp
+	struct SliderSet OBody::GenerateSlidersetFromNode(pugi::xml_node& node, int body){
+		//logger::info("Body type: {}", body);
 		struct SliderSet ret; 
 
 
@@ -861,6 +868,14 @@ namespace Body{
 
     			//logger::info((*it).attribute("name").value());
 
+    			bool inverted = false; 
+    			if ((body == 1)){
+    					if (find(oneDefaultSliders.begin(), oneDefaultSliders.end(), (*it).attribute("name").value()) != oneDefaultSliders.end()){
+    						inverted = true;
+    					}
+    			}
+    					
+
     			float min;
     			float max;
 
@@ -868,7 +883,13 @@ namespace Body{
     				max = (float) atof( (*it).attribute("value").value() );	
     				max = max / 100;
 
+    				if (inverted){
+    					max = 1.0f - max;
+    				}
+
+    				
     				min = 0.0f;
+    				
 
     				//logger::info("Big value: {}", values.second);
 
@@ -876,12 +897,18 @@ namespace Body{
     				min = (float) atof( (*it).attribute("value").value() );	
     				min = min / 100;
 
+    				if (inverted){
+    					min = 1.0f - min;
+    				}
+
+    			
     				max = 0.0f;
+    	
     			}
 
     			
 
-    			AddSliderToSet(ret, BuildSlider((*it).attribute("name").value(), min, max ));
+    			AddSliderToSet(ret, BuildSlider((*it).attribute("name").value(), min, max ), inverted);
 
     		}
 
@@ -889,17 +916,62 @@ namespace Body{
 
     	}
 
+    	/*
+    	if (body == 1){
+    		for (auto i = oneDefaultSliders.begin(); i != oneDefaultSliders.end(); ++i){
+    			string slidername = (*i);
+
+    			if (!SliderSetContainsSlider(ret, slidername)){
+    				AddSliderToSet(ret, BuildSlider(slidername, 0.0f), true);
+    			}
+    		}
+
+    		// oneDefaultSliders
+    	}
+    	*/
 
 		return ret;
 	}
 
+	bool OBody::SliderSetContainsSlider(struct SliderSet& set, string slidername){
+		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i){
+			auto slider = (*i);
+
+			if (strcmp(slider.name.c_str(), slidername.c_str()) == 0){
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	int OBody::GetBodyType(string body){
+		if (StringContains(body, "unp") || StringContains(body, "UNP")|| StringContains(body, "Unp") || StringContains(body, "coco") || StringContains(body, "COCO") || StringContains(body, "Coco")){
+			return 1; // unp/coco
+		} else{
+			return 0;
+		}
+	}
+	
 	void OBody::AddSliderToSet(struct SliderSet& sliderset, struct Slider slider){
+		AddSliderToSet(sliderset, slider, false);
+	}	
+
+	void OBody::AddSliderToSet(struct SliderSet& sliderset, struct Slider slider, bool inverted){
+//		float val;
+//		if (inverted){
+//			val = 1.0f;
+//		} else{
+		inverted;
+		float val = 0.0f;
+//		}
+
 		if ( !sliderset.sliders.empty() &&( strcmp(sliderset.sliders.back().name.c_str(), slider.name.c_str()) == 0 )){
 			// merge
-			if ((sliderset.sliders.back().min == 0.0f) && (slider.min != 0.0f)){
+			if ((sliderset.sliders.back().min == val) && (slider.min != val)){
 				// fill in small
 				sliderset.sliders.back().min = slider.min;
-			} else if((sliderset.sliders.back().max == 0.0f) && (slider.max != 0.0f)){
+			} else if((sliderset.sliders.back().max == val) && (slider.max != val)){
 				//fill in large
 				sliderset.sliders.back().max = slider.max;
 			}
@@ -936,7 +1008,7 @@ namespace Body{
 			logger::info(">  Maximum score: {}", score.MaxScore);
 
 		}
-		//PrintSliderSet(preset.sliders);
+		PrintSliderSet(preset.sliders);
 	}
 
 	void OBody::PrintDatabase(struct PresetDatabase& database){
@@ -1031,6 +1103,17 @@ namespace Body{
 
 	void OBody::GenerateDatabases(){
 		// Generate scores
+
+		oneDefaultSliders.push_back("Breasts");
+		oneDefaultSliders.push_back("BreastsSmall");
+		oneDefaultSliders.push_back("NippleDistance");
+		oneDefaultSliders.push_back("NippleSize");
+		oneDefaultSliders.push_back("ButtCrack");
+		oneDefaultSliders.push_back("Butt");
+		oneDefaultSliders.push_back("ButtSmall");
+		oneDefaultSliders.push_back("Legs");
+		oneDefaultSliders.push_back("Arms");
+		oneDefaultSliders.push_back("ShoulderWidth");
 
 
 		// breasts (cbbe)
