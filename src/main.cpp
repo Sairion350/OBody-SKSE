@@ -1,13 +1,9 @@
 #include "Version.h"
 #include "Body/Morph.h"
+#include "Body/OBody.h"
 #include "Papyrus.h"
 #include "SKEE.h"
 #include "Event/Event.h"
-
-#include "Body/OBody.h"
-
-inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
-
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 {
@@ -50,7 +46,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 		return false;
 	}
 
-	*path /= "OBody.log"sv;
+	*path /= fmt::format(FMT_STRING("{}.log"), Version::PROJECT);
 	auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
 	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 
@@ -60,10 +56,10 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("OBody: [%^%l%$] %v"s);
 
-	logger::info("OBody v{}"sv, Version::NAME);
+	logger::info(FMT_STRING("{} v{}"), Version::PROJECT, Version::NAME);
 
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
-	a_info->name = "OBody";
+	a_info->name = Version::PROJECT.data();
 	a_info->version = Version::MAJOR;
 
 	if (a_skse->IsEditor()) {
@@ -73,7 +69,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 
 	const auto ver = a_skse->RuntimeVersion();
 	if (ver < SKSE::RUNTIME_1_5_39) {
-		logger::critical("Unsupported runtime version {}"sv, ver.string());
+		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
 		return false;
 	}
 
@@ -92,17 +88,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	if (!papyrus->Register(Papyrus::Bind))
 		return false;
 
-
-	auto events = RE::ScriptEventSourceHolder::GetSingleton();
-	if (events) {
-		//events->AddEventSink(Body::OBody::GetInstance());
-		//events->AddEventSink(EquipEventHandler::GetSingleton());
-		//events->AddEventSink(AnimationEventHandler::GetSingleton());
-	}
-
-
-
-	logger::info("OBody loaded"sv);
+	logger::info(FMT_STRING("{} loaded"), Version::PROJECT);
 
 	return true;
 }

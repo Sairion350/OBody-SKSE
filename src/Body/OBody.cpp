@@ -1,79 +1,13 @@
 #include "Body/OBody.h"
 
+namespace Body 
+{
+	inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
 
+	const fs::path root_path("Data\\CalienteTools\\BodySlide\\SliderPresets");
 
-using namespace std;
-
-inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
-
-
-namespace Body{
-
-	vector<string> oneDefaultSliders;
-	
-	struct SliderSet
+	float OBody::GetBodypartScore(BodypartScoreSet& bodypartSet, SliderSet sliders, bool max)
 	{
-		vector<struct Slider> sliders;
-	};
-	struct BodyslidePreset
-	{
-		string name;
-		string body;
-		vector<struct ScoreSet> scores;
-		struct SliderSet sliders;
-	};
-	struct Slider
-	{
-		string name;
-		float min;
-		float max;
-	};
-	struct PresetDatabase
-	{
-		vector<struct BodyslidePreset> presets;
-	};
-	struct ScoreSet
-	{
-		string name;
-		float MinScore; // 100 = large?
-		float MaxScore;
-	};
-	struct BodysliderSliderScore
-	{
-		string name;
-		int score;
-	};
-	struct BodypartScoreset
-	{
-		vector<struct BodysliderSliderScore> scores;
-	};
-	struct RaceStat
-	{
-		string name;
-		string bodypart;
-		int value;
-	};
-	struct RaceStatDatabase
-	{
-		vector<struct RaceStat> races;
-	};
-
-	
-	struct RaceStatDatabase RaceStats;
-
-	struct PresetDatabase FemalePresets;
-	struct PresetDatabase MalePresets;
-
-	struct BodypartScoreset BreastScores;
-	struct BodypartScoreset ButtScores;
-	struct BodypartScoreset WaistScores;
-
-
-
-	bool UseRaceStats = true;
-
-
-	float OBody::GetBodypartScore(struct BodypartScoreset& bodypartSet, struct SliderSet sliders, bool max){
 		//PrintSliderSet(sliders);
 
 		float ret = 0.0f;
@@ -81,7 +15,7 @@ namespace Body{
 			struct Slider slider = (*i);
 
 			float mult;
-			string name = slider.name;
+			std::string name = slider.name;
 			if (max){
 				mult = slider.max;
 			} else {
@@ -92,26 +26,30 @@ namespace Body{
 
 			//logger::info("Trying: {}", slider.name);
 
-			ret = ret + (((float) val) * mult);
+			ret += static_cast<float>(val) * mult;
 		}
 
 		//logger::info("Final score: {}", ret);
 		return ret;
 	}
 
-	float OBody::GetBreastScore(struct SliderSet sliders, bool max){
+	float OBody::GetBreastScore(SliderSet sliders, bool max)
+	{
 		return GetBodypartScore(BreastScores, sliders, max);
 	}
 
-	float OBody::GetButtScore(struct SliderSet sliders, bool max){
+	float OBody::GetButtScore(SliderSet sliders, bool max)
+	{
 		return GetBodypartScore(ButtScores, sliders, max);
 	}
 
-	float OBody::GetWaistScore(struct SliderSet sliders, bool max){
+	float OBody::GetWaistScore(SliderSet sliders, bool max)
+	{
 		return GetBodypartScore(WaistScores, sliders, max);
 	}
 
-	int OBody::GetSliderScore(struct BodypartScoreset& scoreset, string slidername){
+	int OBody::GetSliderScore(BodypartScoreSet& scoreset, std::string slidername)
+	{
 		for (auto i = scoreset.scores.begin(); i != scoreset.scores.end(); ++i){
 			auto slider = (*i);
 
@@ -123,59 +61,60 @@ namespace Body{
 		}
 
 		return 0;
-
 	}
 
-	int OBody::GetFemaleDatabaseSize(){
-		return (int)FemalePresets.presets.size();
-	}
-	int OBody::GetMaleDatabaseSize(){
-		return (int)MalePresets.presets.size();
+	int OBody::GetFemaleDatabaseSize()
+	{
+		return static_cast<int>(FemalePresets.presets.size());
 	}
 
-	const fs::path root_path("Data\\CalienteTools\\BodySlide\\SliderPresets");
+	int OBody::GetMaleDatabaseSize()
+	{
+		return static_cast<int>(MalePresets.presets.size());
+	}
 
-	bool set_ORefit = true;
-	bool set_NippleRand = true;
-	bool set_GenitalRand = true;
+	OBody* OBody::GetInstance()
+	{
+		static OBody instance;
+		return &instance;
+	}
 
-	OBody* OBody::GetInstance(){
-			static OBody instance;
-			return &instance;
-		}
-
-	void OBody::SetLoaded(bool a){
+	void OBody::SetLoaded(bool a)
+	{
 		GameLoaded = a;
 	}
 
-	void OBody::SetORefit(bool a){
+	void OBody::SetORefit(bool a) 
+	{
 		set_ORefit = a;
 	}
 
-	void OBody::SetNippleRand(bool a){
+	void OBody::SetNippleRand(bool a)
+	{
 		set_NippleRand = a;
 	}
 
-	void OBody::SetGenitalRand(bool a){
+	void OBody::SetGenitalRand(bool a)
+	{
 		set_GenitalRand = a;
 	}
 
-	struct PresetDatabase OBody::SortPresetDatabaseByRaceStat(struct PresetDatabase& database, struct RaceStat stat){
+	PresetDatabase OBody::SortPresetDatabaseByRaceStat(PresetDatabase& database, RaceStat stat)
+	{
 		return SortPresetDatabaseByBodypart(database, stat.bodypart);
 	}
 
-	struct PresetDatabase OBody::SortPresetDatabaseByBodypart(struct PresetDatabase& database, string bodypart){
-		struct PresetDatabase ret;
+	PresetDatabase OBody::SortPresetDatabaseByBodypart(PresetDatabase& database, std::string bodypart)
+	{
+		PresetDatabase ret;
 		auto arr = database.presets;
-
 		int n = (int) arr.size();
  
         // One by one move boundary of unsorted subarray
-        for (int i = 0; i < n-1; i++)
-        {
+        for (int i = 0; i < n-1; i++) {
             // Find the minimum element in unsorted array
             int min_idx = i;
-            for (int j = i+1; j < n; j++){
+            for (int j = i+1; j < n; j++) {
             	auto j_scoreset = GetScoresetFromPresetByName(arr[j], bodypart);
             	auto minidx_scoreset = GetScoresetFromPresetByName(arr[min_idx], bodypart);
 
@@ -193,15 +132,11 @@ namespace Body{
 
         ret.presets = arr;
         return ret;
-
 	}
 
-
-	struct ScoreSet OBody::GetScoresetFromPresetByName(struct BodyslidePreset& preset, string scorename){
-
-		
-
-		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
+	ScoreSet OBody::GetScoresetFromPresetByName(BodyslidePreset& preset, std::string scorename)
+	{
+		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i) {
 			auto score = (*i);
 
 			if (strcmp(score.name.c_str(), scorename.c_str()) == 0){
@@ -209,9 +144,7 @@ namespace Body{
 			}
 		}
 
-		struct ScoreSet blank;
-
-		return blank;
+		return {};
 	}
 
 /*
@@ -233,15 +166,13 @@ namespace Body{
 	static bool OBody::comparePresetByWaistScore(const BodyslidePreset &a, const BodyslidePreset &b){
 		return comparePresetByScore(a, b, "waist")
 	}
-
-	
-
 */
 
-	void OBody::ProcessActor(RE::Actor* act){
+	void OBody::ProcessActor(RE::Actor* act)
+	{
 		///morphInt->EvaluateBodyMorphs(act);
 
-		if (!GameLoaded){
+		if (!GameLoaded) {
 			logger::info("Game not fully loaded, skipping actor");
 			return;
 		}
@@ -249,34 +180,31 @@ namespace Body{
 		//logger::info("Has: {}", GetMorph(act, "obody_processed"));
 		//if (morphInt->HasBodyMorphKey(act, key)){
 
-		if (IsProcessed(act)){
+		if (IsProcessed(act)) {
 			// ignore, already set
 			logger::info("Skipping: {}", act->GetName());
-		} else{
+		} else {
 			logger::info("Processing: {}", act->GetName());
-
 			GenerateActorBody(act);
-
 		}
-		
-
 	}
 
-	bool OBody::IsProcessed(RE::Actor* act){
+	bool OBody::IsProcessed(RE::Actor* act)
+	{
 		return GetMorph(act, "obody_processed") == 1.0f;
 	}
 
-	void OBody::ProcessActorEquipEvent(RE::Actor* act, bool RemovingBodyArmor){	
-		if (!IsProcessed(act)){
+	void OBody::ProcessActorEquipEvent(RE::Actor* act, bool RemovingBodyArmor)
+	{	
+		if (!IsProcessed(act)) {
 			return;
 		}
 	
-
-		if (HasActiveClothePreset(act) && (IsNaked(act) || RemovingBodyArmor)){
+		if (HasActiveClothePreset(act) && (IsNaked(act) || RemovingBodyArmor)) {
 			//logger::info("Removing clothe preset");
 			RemoveClothePreset(act);
 			ApplyMorphs(act);
-		} else if(!HasActiveClothePreset(act) && !IsNaked(act) && set_ORefit){
+		} else if(!HasActiveClothePreset(act) && !IsNaked(act) && set_ORefit) {
 			//logger::info("adding clothe preset");
 			ApplyClothePreset(act);
 			ApplyMorphs(act);
@@ -288,20 +216,19 @@ namespace Body{
 		return a_morphInt->GetVersion() ? this->morphInt = a_morphInt : false;
 	}
 
-	void OBody::GenerateActorBody(RE::Actor* act){
-		struct BodyslidePreset preset;
-
-
-		if (IsFemale(act)){
-			if (GetFemaleDatabaseSize() < 1){
+	void OBody::GenerateActorBody(RE::Actor* act)
+	{
+		BodyslidePreset preset;
+		if (IsFemale(act)) {
+			if (GetFemaleDatabaseSize() < 1) {
 				SetMorph(act, "obody_processed", 1.0f, "OBody");
 				OnActorGenerated.SendEvent(act);
 				return;
 			}
-			if (RaceStats.races.size() > 0){
+			if (RaceStats.races.size() > 0) {
 				// user is using the XML race feature
 				auto RaceStat = GetCorrespondingRaceStat(act);
-				if (RaceStat.value > -1){
+				if (RaceStat.value > -1) {
 					auto sortedDB = SortPresetDatabaseByRaceStat(FemalePresets, RaceStat);
 
 					int dbSize = (int)sortedDB.presets.size();
@@ -319,22 +246,15 @@ namespace Body{
 						max = dbSize - 1;
 
 					int finalPreset = RandomInt(min, max);
-
 					preset = sortedDB.presets[finalPreset];
-
-
-
-				} else{
+				} else {
 					preset = GetRandomElementOfDatabase(FemalePresets);
 				}
-				
-
 			} else {
 				preset = GetRandomElementOfDatabase(FemalePresets);
 			}
-			
 		} else {
-			if (GetMaleDatabaseSize() < 1){
+			if (GetMaleDatabaseSize() < 1) {
 				SetMorph(act, "obody_processed", 1.0f, "OBody");
 				OnActorGenerated.SendEvent(act);
 				return;
@@ -342,18 +262,14 @@ namespace Body{
 			preset = GetRandomElementOfDatabase(MalePresets);
 		}
 
-
 		GenerateFullBodyFromPreset(act, preset);
-
-	
 		SetMorph(act, "obody_processed", 1.0f, "OBody");
 
 		OnActorGenerated.SendEvent(act);
-
-		
 	}
 
-	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, struct BodyslidePreset preset){
+	void OBody::GenerateFullBodyFromPreset(RE::Actor* act, BodyslidePreset preset)
+	{
 		//morphInt->ClearBodyMorphKeys(act, "OClothe");
 		//morphInt->ClearBodyMorphKeys(act, "OBody");
 		morphInt->ClearMorphs(act);
@@ -366,19 +282,17 @@ namespace Body{
 
 		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
 			auto score = (*i);
-			
 			SaveScoreToActor(act, score, weight);
-
 		}
 
-		if (IsFemale(act)){
+		if (IsFemale(act)) {
 			// random nipples
-			if (set_NippleRand){
+			if (set_NippleRand) {
 				ApplySliderSet(act, GenerateRandomNippleSliders(), "OBody");
 			}
 
 			// random vagina
-			if (set_GenitalRand){
+			if (set_GenitalRand) {
 				ApplySliderSet(act, GenerateRandomGenitalSliders(), "OBody");
 			}
 		}
@@ -389,43 +303,38 @@ namespace Body{
 		}
 
 		ApplyMorphs(act);
-
-
 		SetMorph(act, "obody_processed", 1.0f, "OBody");
 	}
 
-	bool OBody::HasActiveClothePreset(RE::Actor* act){
+	bool OBody::HasActiveClothePreset(RE::Actor* act)
+	{
 		return morphInt->HasBodyMorphKey(act, "OClothe");
 	}
 
-	void OBody::RemoveClothePreset(RE::Actor* act){
+	void OBody::RemoveClothePreset(RE::Actor* act)
+	{
 		morphInt->ClearBodyMorphKeys(act, "OClothe");
 	}
 
-	void OBody::ApplyClothePreset(RE::Actor* act){
+	void OBody::ApplyClothePreset(RE::Actor* act)
+	{
 		auto clotheSet = GenerateClotheSliders(act);
 
 		//PrintSliderSet(clotheSet);
-
 		ApplySliderSet(act, clotheSet, "OClothe");
 	}
 
-	bool OBody::IsNaked(RE::Actor* act){
-		auto* changes = act->GetInventoryChanges();
-		auto* const armor = changes->GetArmorInSlot(32);
-
-		
-		if (armor){
-			return false;
-		} else {
-			return true;
-		}
-
+	bool OBody::IsNaked(RE::Actor* act)
+	{
+		auto changes = act->GetInventoryChanges();
+		auto armor = changes->GetArmorInSlot(32);
+		return armor ? true : false;
 	}
 
-	struct RaceStat OBody::GetCorrespondingRaceStat(RE::Actor* act){
-		struct RaceStat ret;
-		string RaceName = act->GetActorBase()->GetRace()->GetName();
+	RaceStat OBody::GetCorrespondingRaceStat(RE::Actor* act)
+	{
+		RaceStat ret;
+		std::string RaceName = act->GetActorBase()->GetRace()->GetName();
 
 		for (auto i = RaceStats.races.begin(); i != RaceStats.races.end(); ++i){
 			auto stat = (*i);
@@ -438,51 +347,57 @@ namespace Body{
 		return ret;
 	}
 
-	void OBody::SetMorph(RE::Actor* act, string MorphName, float value, string key){
+	void OBody::SetMorph(RE::Actor* act, std::string MorphName, float value, std::string key)
+	{
 		//logger::info(">> Setting morph: {}", MorphName);
 		//logger::info(">>  With morph value: {}", value);
-		morphInt->SetMorph(act->AsReference(), MorphName.c_str(), key.c_str(), value);
+		morphInt->SetMorph(act, MorphName.c_str(), key.c_str(), value);
 	}
 
-	float OBody::GetMorph(RE::Actor* act, string MorphName){
-
-		return morphInt->GetMorph(act->AsReference(), MorphName.c_str(), "OBody");
+	float OBody::GetMorph(RE::Actor* act, std::string MorphName)
+	{
+		return morphInt->GetMorph(act, MorphName.c_str(), "OBody");
 	}
 
-	void OBody::SetMorphByWeight(RE::Actor* act, struct Slider slider, float weight, string key){
+	void OBody::SetMorphByWeight(RE::Actor* act, Slider slider, float weight, std::string key)
+	{
 		float value = ((slider.max - slider.min) * weight) + slider.min;
 		SetMorph(act, slider.name, value, key);
 	}
 
-	void OBody::ApplySlider(RE::Actor* act, struct Slider slid, float weight, string key){
+	void OBody::ApplySlider(RE::Actor* act, struct Slider slid, float weight, std::string key)
+	{
 		SetMorphByWeight(act, slid, weight, key);
 	}
 
-	void OBody::ApplySliderSet(RE::Actor* act, struct SliderSet sliderset, string key){
+	void OBody::ApplySliderSet(RE::Actor* act, SliderSet sliderset, std::string key)
+	{
 		auto weight = GetWeight(act);
 		for (auto i = sliderset.sliders.begin(); i != sliderset.sliders.end(); ++i)
         	ApplySlider(act, *i, weight, key);
 	}
 
-	void OBody::ApplyBodyslidePreset(RE::Actor* act, struct BodyslidePreset preset ){
+	void OBody::ApplyBodyslidePreset(RE::Actor* act, BodyslidePreset preset)
+	{
 		ApplySliderSet(act, preset.sliders, "OBody");
 		//PrintPreset(preset);
 	}
 
-	struct SliderSet OBody::GenerateRandomNippleSliders(){
-		struct SliderSet set;
+	SliderSet OBody::GenerateRandomNippleSliders()
+	{
+		SliderSet set;
 
-		if (ChanceRoll(15)){
+		if (ChanceRoll(15)) {
 			AddSliderToSet(set, BuildSlider("AreolaSize", RandomFloat(-1.0f, 0.0f) ));
 		} else{
 			AddSliderToSet(set, BuildSlider("AreolaSize", RandomFloat(0.0f, 1.0f) ));
 		}
 
-		if (ChanceRoll(75)){
+		if (ChanceRoll(75)) {
 			AddSliderToSet(set, BuildSlider("AreolaPull_v2", RandomFloat(-0.25f, 1.0f) ));
 		}
 		
-		if (ChanceRoll(15)){
+		if (ChanceRoll(15)) {
 			AddSliderToSet(set, BuildSlider("NippleLength", RandomFloat(0.2f, 0.3f) ));
 		} else{
 			AddSliderToSet(set, BuildSlider("NippleLength", RandomFloat(0.0f, 0.1f) ));
@@ -490,11 +405,11 @@ namespace Body{
 
 		AddSliderToSet(set, BuildSlider("NippleManga", RandomFloat(-0.3f, 0.8f) ));
 
-		if (ChanceRoll(25)){
+		if (ChanceRoll(25)) {
 			AddSliderToSet(set, BuildSlider("NipplePerkManga", RandomFloat(-0.3f, 1.2f) ));
 		}
 
-		if (ChanceRoll(15)){
+		if (ChanceRoll(15)) {
 			AddSliderToSet(set, BuildSlider("NipBGone", RandomFloat(0.6f, 1.0f) ));
 		}
 
@@ -504,38 +419,38 @@ namespace Body{
 
 		AddSliderToSet(set, BuildSlider("NippleCrease_v2", RandomFloat(-0.4f, 1.0f) ));
 
-		if (ChanceRoll(6)){
+		if (ChanceRoll(6)) {
 			AddSliderToSet(set, BuildSlider("NipplePuffy_v2", RandomFloat(0.4f, 0.7f) ));
 		}
 
-		if (ChanceRoll(35)){
+		if (ChanceRoll(35)) {
 			AddSliderToSet(set, BuildSlider("NippleThicc_v2", RandomFloat(0.0f, 0.9f) ));
 		}
 
-		if (ChanceRoll(2)){
-			if (ChanceRoll(50)){
+		if (ChanceRoll(2)) {
+			if (ChanceRoll(50)) {
 				AddSliderToSet(set, BuildSlider("NippleInvert_v2", 1.0f ));
 			} else {
 				AddSliderToSet(set, BuildSlider("NippleInvert_v2", RandomFloat(0.65f, 0.8f) ));
 			}
 		}
 
-
 		return set;
 	}
 
-	struct SliderSet OBody::GenerateRandomGenitalSliders(){
-		struct SliderSet set;
+	SliderSet OBody::GenerateRandomGenitalSliders()
+	{
+		SliderSet set;
 
-		if (ChanceRoll(20)){
+		if (ChanceRoll(20)) {
 			// innie
 			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(0.95f, 1.1f) ));
 
-			if (ChanceRoll(50)){
+			if (ChanceRoll(50)) {
 				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.75f, 1.25f) ));
 			}
 
-			if (ChanceRoll(40)){
+			if (ChanceRoll(40)) {
 				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 1.0f) ));
 			}
 
@@ -554,15 +469,15 @@ namespace Body{
 
 			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.4f, 0.25f) ));
 
-		} else if (ChanceRoll(75)){
+		} else if (ChanceRoll(75)) {
 			//average
 			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(0.4f, 0.75f) ));
 
-			if (ChanceRoll(40)){
+			if (ChanceRoll(40)) {
 				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.50f, 1.00f) ));
 			}
 
-			if (ChanceRoll(30)){
+			if (ChanceRoll(30)) {
 				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 0.75f) ));
 			}
 
@@ -570,43 +485,37 @@ namespace Body{
 			AddSliderToSet(set, BuildSlider("Labiaprotrude2", RandomFloat(0.0f, 0.75f) ));
 			AddSliderToSet(set, BuildSlider("Labiaprotrudeback", RandomFloat(0.0f, 1.0f) ));
 
-			if (ChanceRoll(50)){
+			if (ChanceRoll(50)) {
 				AddSliderToSet(set, BuildSlider("Labiaspread", RandomFloat(0.0f, 1.0f) ));
 				AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 0.7f) ));
 				
-				if (ChanceRoll(60)){
+				if (ChanceRoll(60)) {
 					AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 0.1f) ));
 				}
 			} else {
 				AddSliderToSet(set, BuildSlider("Labiaspread", 0.0f ));
 				AddSliderToSet(set, BuildSlider("LabiaCrumpled_v2", RandomFloat(0.0f, 0.2f) ));
 				
-				if (ChanceRoll(45)){
+				if (ChanceRoll(45)) {
 					AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 0.3f) ));
 				}
 			}
-			
-
-
 
 			AddSliderToSet(set, BuildSlider("LabiaNeat_v2", 0.0f ));
 
 			AddSliderToSet(set, BuildSlider("VaginaHole", RandomFloat(-0.2f, 0.40f) ));
 
 			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.2f, 0.25f) ));
-
-
 		} else{
 			//outie
 
 			AddSliderToSet(set, BuildSlider("Innieoutie", RandomFloat(-0.25f, 0.30f) ));
 
-
-			if (ChanceRoll(30)){
+			if (ChanceRoll(30)) {
 				AddSliderToSet(set, BuildSlider("Labiapuffyness", RandomFloat(0.20f, 0.50f) ));
 			}
 
-			if (ChanceRoll(10)){
+			if (ChanceRoll(10)) {
 				AddSliderToSet(set, BuildSlider("LabiaMorePuffyness_v2", RandomFloat(0.0f, 0.35f) ));
 			}
 
@@ -620,17 +529,14 @@ namespace Body{
 
 			AddSliderToSet(set, BuildSlider("LabiaBulgogi_v2", RandomFloat(0.0f, 1.0f) ));
 
-			if (ChanceRoll(40)){
+			if (ChanceRoll(40)) {
 				AddSliderToSet(set, BuildSlider("LabiaNeat_v2", RandomFloat(0.0f, 0.25f) ));
 			}
 			
-
 			AddSliderToSet(set, BuildSlider("VaginaHole", RandomFloat(0.0f, 1.0f) ));
 
 			AddSliderToSet(set, BuildSlider("Clit", RandomFloat(-0.4f, 0.25f) ));
 		}
-
-
 
 		AddSliderToSet(set, BuildSlider("Vaginasize", RandomFloat(0.0f, 1.0f) ));
 		AddSliderToSet(set, BuildSlider("ClitSwell_v2", RandomFloat(-0.3f, 1.1f) ));
@@ -638,13 +544,11 @@ namespace Body{
 
 		AddSliderToSet(set, BuildSlider("LabiaTightUp", RandomFloat(0.0f, 1.0f) ));
 
-		if (ChanceRoll(60)){
+		if (ChanceRoll(60)) {
 			AddSliderToSet(set, BuildSlider("CBPC", RandomFloat(-0.25f, 0.25f) ));
 		} else {
 			AddSliderToSet(set, BuildSlider("CBPC", RandomFloat(0.6f, 1.0f) ));
 		}
-
-
 
 		AddSliderToSet(set, BuildSlider("AnalPosition_v2", RandomFloat(0.0f, 1.0f) ));
 		AddSliderToSet(set, BuildSlider("AnalTexPos_v2", RandomFloat(0.0f, 1.0f) ));
@@ -654,9 +558,9 @@ namespace Body{
 
 		return set;
 	}
-
 	
-	float OBody::RandomFloat(float a, float b) {
+	float OBody::RandomFloat(float a, float b)
+	{
 		// non-inclusive
     	float random = ((float) rand()) / (float) RAND_MAX;
     	float diff = b - a;
@@ -664,7 +568,8 @@ namespace Body{
     	return a + r;
 	}
 
-	int OBody::RandomInt(int a, int b) {
+	int OBody::RandomInt(int a, int b)
+	{
 		// non-inclusive
     	float random = ((float) rand()) / (float) RAND_MAX;
     	int diff = b - a;
@@ -672,17 +577,15 @@ namespace Body{
     	return a + r;
 	}
 
-	bool OBody::ChanceRoll(int chance) {
+	bool OBody::ChanceRoll(int chance)
+	{
 		float roll = RandomFloat(0.0f, 99.0f);
-
-		if (roll <= (float) chance){
-			return true;
-		}
-		return false;
+		return roll <= static_cast<float>(chance);
 	}
 
-	struct SliderSet OBody::GenerateClotheSliders(RE::Actor* act){
-		struct SliderSet set;
+	SliderSet OBody::GenerateClotheSliders(RE::Actor* act)
+	{
+		SliderSet set;
 
 		// breasts
 		// make area on sides behind breasts not sink in
@@ -720,7 +623,6 @@ namespace Body{
 		// Push out navel
 		AddSliderToSet(set, BuildDerivativeSlider(act, "NavelEven", 1.0f));
 
-
 		// hip
 		// remove defintion on hip bone
 		AddSliderToSet(set, BuildDerivativeSlider(act, "HipCarved", 0.0f));
@@ -745,44 +647,42 @@ namespace Body{
 		// Flatten nipple
 		AddSliderToSet(set, BuildDerivativeSlider(act, "NipplePerkiness", 0.0f));
 
-
 		return set;
 	}
 
+	std::vector<RE::BSFixedString> OBody::GetPresets(RE::Actor* act)
+	{
+		std::vector<RE::BSFixedString> ret;
+		PresetDatabase base = FemalePresets;
 
-	vector<RE::BSFixedString> OBody::GetPresets(RE::Actor* act){
-		vector<RE::BSFixedString> ret;
-		struct PresetDatabase base = FemalePresets;
-
-		if (!IsFemale(act)){
+		if (!IsFemale(act)) {
 			base = MalePresets;
 		}
 
-		for (auto i = base.presets.begin(); i != base.presets.end(); ++i){
+		for (auto i = base.presets.begin(); i != base.presets.end(); ++i) {
         	auto preset = (*i);
         	ret.push_back(preset.name);
-
         }
 
         return ret;
 	}
 
-	struct BodyslidePreset OBody::GetPresetByName(struct PresetDatabase& database, string name){
-		for (auto i = database.presets.begin(); i != database.presets.end(); ++i){
+	BodyslidePreset OBody::GetPresetByName(PresetDatabase& database, std::string name)
+	{
+		for (auto i = database.presets.begin(); i != database.presets.end(); ++i) {
         	auto preset = (*i);
-        	if (strcmp(preset.name.c_str(), name.c_str()) == 0){
+        	if (strcmp(preset.name.c_str(), name.c_str()) == 0) {
         		return preset;
         	}
-
         }
 
         return database.presets[0];
-
 	}
 
-	void OBody::GenBodyByName(RE::Actor* act, string PresetName){
+	void OBody::GenBodyByName(RE::Actor* act, std::string PresetName)
+	{
 		// do not send this an invalid name, you have been warned
-		struct BodyslidePreset preset;
+		BodyslidePreset preset;
 
 		if (IsFemale(act)){
 			preset = GetPresetByName(FemalePresets, PresetName);
@@ -795,51 +695,53 @@ namespace Body{
 		//}
 	}
 
-	struct BodyslidePreset OBody::GenerateSinglePresetFromFile(string file){
+	BodyslidePreset OBody::GenerateSinglePresetFromFile(std::string file)
+	{
 		return GeneratePresetsFromFile(file)[0];
 	}
 
-	void OBody::GenBodyByFile(RE::Actor* act, string path){
+	void OBody::GenBodyByFile(RE::Actor* act, std::string path)
+	{
 		logger::info("Path: {}", path);
 		GenerateFullBodyFromPreset(act, GenerateSinglePresetFromFile(path));
 	}	
 
-	vector<struct BodyslidePreset> OBody::GeneratePresetsFromFile(string file){
+	std::vector<BodyslidePreset> OBody::GeneratePresetsFromFile(std::string file)
+	{
 		auto doc = GetDocFromFile(file);
 		return GeneratePresetsFromDoc(doc);
 	}
 
-	vector<struct BodyslidePreset> OBody::GeneratePresetsFromDoc(pugi::xml_document& doc){
+	std::vector<BodyslidePreset> OBody::GeneratePresetsFromDoc(pugi::xml_document& doc)
+	{
 		pugi::xml_node presetNode = doc.child("SliderPresets");
 
-		vector<struct BodyslidePreset> ret;
-
+		std::vector<BodyslidePreset> ret;
 		for (pugi::xml_node_iterator it = presetNode.begin(); it != presetNode.end(); ++it){
 			ret.push_back(GeneratePresetFromNode((*it)));
 		}
 
 		return ret;
-
-		
 	}
 
-	struct BodyslidePreset OBody::GeneratePresetFromNode(pugi::xml_node node){
-		string name = node.attribute("name").value();
-		string body = node.attribute("set").value(); 
+	BodyslidePreset OBody::GeneratePresetFromNode(pugi::xml_node node)
+	{
+		std::string name = node.attribute("name").value();
+		std::string body = node.attribute("set").value(); 
 		auto sliderset = GenerateSlidersetFromNode(node, GetBodyType(body));
-		vector<struct ScoreSet> scores; 
+		std::vector<ScoreSet> scores; 
 
-		struct ScoreSet breasts;
+		ScoreSet breasts;
 		breasts.name = "breasts";
 		breasts.MinScore = GetBreastScore(sliderset, false);
 		breasts.MaxScore = GetBreastScore(sliderset, true);
 
-		struct ScoreSet butt;
+		ScoreSet butt;
 		butt.name = "butt";
 		butt.MinScore = GetButtScore(sliderset, false);
 		butt.MaxScore = GetButtScore(sliderset, true);
 
-		struct ScoreSet waist;
+		ScoreSet waist;
 		waist.name = "waist";
 		waist.MinScore = GetWaistScore(sliderset, false);
 		waist.MaxScore = GetWaistScore(sliderset, true);
@@ -848,7 +750,7 @@ namespace Body{
 		scores.push_back(butt);
 		scores.push_back(waist);
 
-		struct BodyslidePreset ret;
+		BodyslidePreset ret;
 		ret.name = name;
 		ret.body = body;
 		ret.scores = scores;
@@ -857,40 +759,33 @@ namespace Body{
 		//PrintPreset(ret);
 		//PrintSliderSet(sliderset);
 
-
 		return ret;
-
 	}
 
 	// 0 - cbbe
 	// 1 - unp
-	struct SliderSet OBody::GenerateSlidersetFromNode(pugi::xml_node& node, int body){
+	SliderSet OBody::GenerateSlidersetFromNode(pugi::xml_node& node, int body)
+	{
 		//logger::info("Body type: {}", body);
-		struct SliderSet ret; 
-
-
-    	for (pugi::xml_node_iterator it = node.begin(); it != node.end(); ++it)
-    	{
-
+		SliderSet ret; 
+    	for (pugi::xml_node_iterator it = node.begin(); it != node.end(); ++it) {
     		//logger::info("Name: {}", it->name());
 
-    		if ( strcmp(it->name(), "SetSlider") == 0 )
+    		if (strcmp(it->name(), "SetSlider") == 0 )
     		{
-
     			//logger::info((*it).attribute("name").value());
 
     			bool inverted = false; 
     			if ((body == 1)){
-    					if (find(oneDefaultSliders.begin(), oneDefaultSliders.end(), (*it).attribute("name").value()) != oneDefaultSliders.end()){
-    						inverted = true;
-    					}
+    				if (find(oneDefaultSliders.begin(), oneDefaultSliders.end(), (*it).attribute("name").value()) != oneDefaultSliders.end()){
+    					inverted = true;
+    				}
     			}
     					
-
     			float min;
     			float max;
 
-    			if ( strcmp((*it).attribute("size").value(), "big") == 0){
+    			if (strcmp((*it).attribute("size").value(), "big") == 0) {
     				max = (float) atof( (*it).attribute("value").value() );	
     				max = max / 100;
 
@@ -898,12 +793,9 @@ namespace Body{
     					max = 1.0f - max;
     				}
 
-    				
     				min = 0.0f;
-    				
 
     				//logger::info("Big value: {}", values.second);
-
     			} else {
     				min = (float) atof( (*it).attribute("value").value() );	
     				min = min / 100;
@@ -912,19 +804,11 @@ namespace Body{
     					min = 1.0f - min;
     				}
 
-    			
     				max = 0.0f;
-    	
     			}
 
-    			
-
     			AddSliderToSet(ret, BuildSlider((*it).attribute("name").value(), min, max ), inverted);
-
     		}
-
-    
-
     	}
 
     	/*
@@ -944,11 +828,12 @@ namespace Body{
 		return ret;
 	}
 
-	bool OBody::SliderSetContainsSlider(struct SliderSet& set, string slidername){
-		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i){
+	bool OBody::SliderSetContainsSlider(SliderSet& set, std::string slidername)
+	{
+		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i) {
 			auto slider = (*i);
 
-			if (strcmp(slider.name.c_str(), slidername.c_str()) == 0){
+			if (strcmp(slider.name.c_str(), slidername.c_str()) == 0) {
 				return true;
 			}
 		}
@@ -956,61 +841,61 @@ namespace Body{
 		return false;
 	}
 
-	int OBody::GetBodyType(string body){
-		if (StringContains(body, "unp") || StringContains(body, "UNP")|| StringContains(body, "Unp") || StringContains(body, "coco") || StringContains(body, "COCO") || StringContains(body, "Coco")){
-			return 1; // unp/coco
-		} else{
-			return 0;
+	int OBody::GetBodyType(std::string body)
+	{
+		if (StringContains(body, "unp") || StringContains(body, "UNP") || StringContains(body, "Unp") || StringContains(body, "coco") || StringContains(body, "COCO") || StringContains(body, "Coco")) {
+			return 1;  // unp/coco
 		}
+
+		return 0;
 	}
 	
-	void OBody::AddSliderToSet(struct SliderSet& sliderset, struct Slider slider){
+	void OBody::AddSliderToSet(SliderSet& sliderset, Slider slider)
+	{
 		AddSliderToSet(sliderset, slider, false);
 	}	
 
-	void OBody::AddSliderToSet(struct SliderSet& sliderset, struct Slider slider, bool inverted){
-//		float val;
-//		if (inverted){
+	void OBody::AddSliderToSet(SliderSet& sliderset, Slider slider, [[maybe_unused]] bool inverted)
+	{
+		float val = 0;
+//		if (inverted) {
 //			val = 1.0f;
-//		} else{
-		inverted;
-		float val = 0.0f;
 //		}
 
-		if ( !sliderset.sliders.empty() &&( strcmp(sliderset.sliders.back().name.c_str(), slider.name.c_str()) == 0 )){
+		if ( !sliderset.sliders.empty() &&( strcmp(sliderset.sliders.back().name.c_str(), slider.name.c_str()) == 0 )) {
 			// merge
-			if ((sliderset.sliders.back().min == val) && (slider.min != val)){
+			if ((sliderset.sliders.back().min == val) && (slider.min != val)) {
 				// fill in small
 				sliderset.sliders.back().min = slider.min;
-			} else if((sliderset.sliders.back().max == val) && (slider.max != val)){
+			} else if((sliderset.sliders.back().max == val) && (slider.max != val)) {
 				//fill in large
 				sliderset.sliders.back().max = slider.max;
 			}
-		} else{
+		} else {
 			sliderset.sliders.push_back(slider);
 		}
-		
-		
 	}
 
-	struct Slider OBody::BuildSlider(string name, float min, float max){
-		struct Slider ret = {name, min, max};
-
-		return ret;
+	Slider OBody::BuildSlider(std::string name, float min, float max)
+	{
+		return Slider{ name, min, max };
 	}
 
-	struct Slider OBody::BuildSlider(string name, float value){
+	Slider OBody::BuildSlider(std::string name, float value)
+	{
 		return BuildSlider(name, value, value);
 	}
 
-	struct Slider OBody::BuildDerivativeSlider(RE::Actor* act, string morph, float target){
+	Slider OBody::BuildDerivativeSlider(RE::Actor* act, std::string morph, float target)
+	{
 		return BuildSlider(morph, target - GetMorph(act, morph));
 	}
-
 	
-	void OBody::PrintPreset(struct BodyslidePreset preset){
+	void OBody::PrintPreset(BodyslidePreset preset)
+	{
 		logger::info(">Preset name: {}", preset.name);
 		logger::info(">Preset Body: {}", preset.body);
+
 		for (auto i = preset.scores.begin(); i != preset.scores.end(); ++i){
 			auto score = (*i);
 			logger::info("> Score: {}", score.name);
@@ -1019,10 +904,12 @@ namespace Body{
 			logger::info(">  Maximum score: {}", score.MaxScore);
 
 		}
+
 		PrintSliderSet(preset.sliders);
 	}
 
-	void OBody::PrintDatabase(struct PresetDatabase& database){
+	void OBody::PrintDatabase(PresetDatabase& database)
+	{
 		logger::info("Printing database");
 		for (auto i = database.presets.begin(); i != database.presets.end(); ++i){
 			auto preset = (*i);
@@ -1030,29 +917,31 @@ namespace Body{
 		}
 	}
 
-	float OBody::GetScoreByWeight(struct ScoreSet& score, float& weight){
+	float OBody::GetScoreByWeight(ScoreSet& score, float& weight)
+	{
 		return ((score.MaxScore - score.MinScore) * weight) + score.MinScore;
 	}
 
-	void OBody::SaveScoreToActor(RE::Actor* act, struct ScoreSet& score, float& weight){
+	void OBody::SaveScoreToActor(RE::Actor* act, ScoreSet& score, float& weight)
+	{
 		float val = GetScoreByWeight(score, weight);
-
 		SetMorph(act, "obody_score_" + score.name, val, "OBody");
 	}
 
-	void OBody::PrintSliderSet(struct SliderSet set){
+	void OBody::PrintSliderSet(SliderSet set)
+	{
 		for (auto i = set.sliders.begin(); i != set.sliders.end(); ++i){
         	auto slider = (*i);
 
         	logger::info(">    Slider name: {}", slider.name);
         	logger::info(">        Small value: {}", slider.min);
         	logger::info(">        Large value: {}", slider.max);
-        }
-        	
+        }	
 	}
 	
 
-	pugi::xml_document OBody::GetDocFromFile(string pathToFile){
+	pugi::xml_document OBody::GetDocFromFile(std::string pathToFile)
+	{
 		pugi::xml_document doc;
 		doc.load_file(pathToFile.c_str());
 		//pugi::xml_parse_result result = doc.load_file(pathToFile.c_str());
@@ -1061,13 +950,13 @@ namespace Body{
 		return doc;
 	}
 
-	void OBody::BuildRaceStatDB(){
+	void OBody::BuildRaceStatDB()
+	{
 		auto doc = GetDocFromFile("Data\\obody.xml");
 
 		pugi::xml_node SettingNode = doc.child("Enable");
 
 		int val = atoi(SettingNode.attribute("value").value() );
-
 		if (val != 1){
 			logger::info("Racesettings turned off, exiting");
 			return;
@@ -1080,39 +969,38 @@ namespace Body{
 		}
 	}
 
-	struct RaceStat OBody::GenerateRaceStatFromNode(pugi::xml_node node){
-		struct RaceStat ret;
+	RaceStat OBody::GenerateRaceStatFromNode(pugi::xml_node node)
+	{
+		RaceStat ret;
 
 		ret.name = node.attribute("name").value();
 		ret.bodypart = node.attribute("bodypart").value();
-		ret.value = atoi( node.attribute("value").value() );
+		ret.value = std::atoi(node.attribute("value").value());
 
 		//logger::info("Name: {}", name);
 
 		return ret;
 	}
 
-	vector<string> OBody::GetFilesInBodyslideDir(){
-		vector<string> Files;
+	std::vector<std::string> OBody::GetFilesInBodyslideDir()
+	{
+		std::vector<std::string> files;
 		std::string path = "Data\\CalienteTools\\BodySlide\\SliderPresets\\";
-   		for (const auto & entry : fs::directory_iterator(path)){
-   			string stringpath = entry.path().string();
-   			if (IsClothedSet(stringpath) || !StringContains(stringpath, "xml")){
+   		for (const auto & entry : fs::directory_iterator(path)) {
+			std::string stringpath = entry.path().string();
+   			if (IsClothedSet(stringpath) || !StringContains(stringpath, "xml")) {
    				//
-   				
    			} else{
-   				
-        		Files.push_back(stringpath);
+				files.push_back(stringpath);
         		//logger::info(stringpath.c_str());
-   			}
-        		
+   			}	
         }
 
-        return Files;
-
+        return files;
 	}
 
-	void OBody::GenerateDatabases(){
+	void OBody::GenerateDatabases()
+	{
 		// Generate scores
 
 		oneDefaultSliders.push_back("Breasts");
@@ -1125,7 +1013,6 @@ namespace Body{
 		oneDefaultSliders.push_back("Legs");
 		oneDefaultSliders.push_back("Arms");
 		oneDefaultSliders.push_back("ShoulderWidth");
-
 
 		// breasts (cbbe)
         BreastScores.scores.push_back({"DoubleMelon", 30});
@@ -1176,9 +1063,9 @@ namespace Body{
         WaistScores.scores.push_back({"7B Lower", 25});
         WaistScores.scores.push_back({"Vanilla SSE High", 25});
 
-		vector<string> files = GetFilesInBodyslideDir();
+		std::vector<std::string> files = GetFilesInBodyslideDir();
 
-		vector<struct BodyslidePreset> presets;
+		std::vector<BodyslidePreset> presets;
 		for (auto i = files.begin(); i != files.end(); ++i){
 			presets = GeneratePresetsFromFile(*i);
 
@@ -1187,62 +1074,59 @@ namespace Body{
 			} else{
 				AddPresetToDatabase(MalePresets, presets);
 			}
-        	
         }
 
         BuildRaceStatDB();
 
         logger::info("Female presets loaded: {}", FemalePresets.presets.size());
         logger::info("Male presets loaded: {}", MalePresets.presets.size());
-
-
-        
-
-        
-
 	}
 
-	bool OBody::IsFemalePreset(struct BodyslidePreset& preset){
+	bool OBody::IsFemalePreset(BodyslidePreset& preset) {
 		return !( StringContains(preset.body, "HIMBO") || StringContains(preset.body, "himbo") || StringContains(preset.body, "Himbo") || StringContains(preset.body, "Talos") || StringContains(preset.body, "talos") || StringContains(preset.body, "TALOS") );
 	}
 
-	struct BodyslidePreset OBody::GetRandomElementOfDatabase(struct PresetDatabase& database){
-  		random_device seed ;
+	BodyslidePreset OBody::GetRandomElementOfDatabase(PresetDatabase& database)
+	{
+		std::random_device seed;
    		// generator 
   		std::mt19937 engine( seed( ) ) ;
    		// number distribution
-   		uniform_int_distribution<int> choose( 0 , (int)database.presets.size( ) - 1 ) ;
-   		
+		auto size = static_cast<int>(database.presets.size());
+		std::uniform_int_distribution<int> choose(0, size - 1);
    		return database.presets[ choose( engine ) ];
 	}
 
-	bool OBody::IsClothedSet(string set){
+	bool OBody::IsClothedSet(std::string set)
+	{
 		return (StringContains(set, "Outfit") || StringContains(set, "outfit") || StringContains(set, "OUTFIT") || StringContains(set, "Cloth") || StringContains(set, "CLOTH") || StringContains(set, "cloth"));
 	}
 
-	bool OBody::IsFemale(RE::Actor* act){
+	bool OBody::IsFemale(RE::Actor* act)
+	{
 		return act->GetActorBase()->GetSex() == 1;
 	}
 
-	void OBody::AddPresetToDatabase(struct PresetDatabase& database, struct BodyslidePreset preset){
+	void OBody::AddPresetToDatabase(PresetDatabase& database, BodyslidePreset preset)
+	{
 		if (IsClothedSet(preset.name)) {
 			// do not add
 		} else {
 			database.presets.push_back(preset);
 			logger::info("Adding preset: {}", preset.name);
 		}
-		
-
 	}
 
-	void OBody::AddPresetToDatabase(struct PresetDatabase& database, vector<struct BodyslidePreset> presets){
+	void OBody::AddPresetToDatabase(PresetDatabase& database, std::vector<BodyslidePreset> presets)
+	{
 		for (auto i = presets.begin(); i != presets.end(); ++i)
         	AddPresetToDatabase(database, *i);
 	}
 
-	bool OBody::StringContains(string& str, const char* testcase){
-		string s = testcase;
-		return (str).find(s) != string::npos;
+	bool OBody::StringContains(std::string& str, const char* testcase)
+	{
+		std::string s = testcase;
+		return (str).find(s) != std::string::npos;
 
 		/*
 		auto text = str;
@@ -1258,25 +1142,24 @@ namespace Body{
 		return it != text.end();
 		*/
 	}
-	void OBody::ApplyMorphs(RE::Actor* act){
+
+	void OBody::ApplyMorphs(RE::Actor* act)
+	{
 		morphInt->ApplyBodyMorphs(act->AsReference(), true);
 		morphInt->UpdateModelWeight(act->AsReference(), false);
 	}
 
-
 	void OBody::RegisterQuestForEvent(RE::TESQuest* quest)
 	{
-
 		OnActorGenerated.Register(quest);
 	}
 
-	float OBody::GetWeight(RE::Actor* act){
+	float OBody::GetWeight(RE::Actor* act)
+	{
 		float ret = act->GetActorBase()->GetWeight();
 		ret = ret / 100;
 
 		//logger::info("Weight: {}", ret);
-
 		return ret;
 	}
-
 }
