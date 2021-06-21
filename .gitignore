@@ -1,3 +1,10 @@
 /.git
 /.idea
 /build
+meta.ini
+*.zip
+*.pex
+SkyrimSE.code-workspace
+.vscode/launch.json
+.vscode/tasks.json
+*.bat
