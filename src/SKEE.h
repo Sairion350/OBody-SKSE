@@ -1,5 +1,5 @@
 #pragma once
-
+// Racemenu's SKEE interface, in header form so sources aren't included
 namespace SKEE
 {
     class IPluginInterface
