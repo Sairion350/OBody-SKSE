@@ -1,8 +1,8 @@
 #include "Version.h"
 #include "Body/OBody.h"
-#include "Papyrus.h"
-#include "SKEE.h"
+#include "Papyrus/Papyrus.h"
 #include "Event/Event.h"
+#include "SKEE.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 {
@@ -24,14 +24,14 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 			}
 
 			logger::info("BodyMorph Version {}", morphInt->GetVersion());
-			auto OBodyinstance = Body::OBody::GetInstance();
-			if (!OBodyinstance->SetMorphInterface(morphInt))
+			auto obody = Body::OBody::GetInstance();
+			if (!obody->SetMorphInterface(morphInt))
 				logger::info("BodyMorphInterace not provided");
 
-			OBodyinstance->SetLoaded(false);
-			OBodyinstance->GenerateDatabases();
+			obody->SetLoaded(false);
+			obody->GenerateDatabases();
 
-			//OBodyinstance->MountOBodyFaction();
+			//obody->MountOBodyFaction();
 			Event::Register();
 		}
 		break;
@@ -83,9 +83,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	if (!message->RegisterListener(MessageHandler))
 		return false;
 
-	auto papyrus = SKSE::GetPapyrusInterface();
-	if (!papyrus->Register(Papyrus::Bind))
-		return false;
+	Papyrus::Bind();
 
 	logger::info(FMT_STRING("{} loaded"), Version::PROJECT);
 
