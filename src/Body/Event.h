@@ -1,21 +1,10 @@
 #pragma once
 
-#include "Body/OBody.h"
+#include "Body/Body.h"
 
 namespace Event
 {
 	using EventResult = RE::BSEventNotifyControl;
-
-	void Update(RE::FormID a_id)
-	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([a_id] {
-			auto actor = RE::TESObjectREFR::LookupByID<RE::Actor>(a_id);
-			if (actor) {
-				//Actor::UpdateActor(*actor);
-			}
-		});
-	}
 
 	class ObjectLoadedEventHandler : public RE::BSTEventSink<RE::TESObjectLoadedEvent>
 	{
@@ -41,8 +30,8 @@ namespace Event
 
 				if (actor->HasKeyword(keywordNPC)){
 					logger::info("Obj load {} appeared", actor->GetName());
-					auto OBodyinstance = Body::OBody::GetInstance();
-					OBodyinstance->ProcessActor(actor);
+					auto obody = Body::OBody::GetInstance();
+					obody->ProcessActor(actor);
 				}
 			}
 
@@ -73,9 +62,6 @@ namespace Event
 			if (!a_event || !a_event->objectInitialized->Is3DLoaded())
 				return EventResult::kContinue;
 
-			//Update(a_event->formID);
-			//logger::info("Thing loaded in");actor->As<RE::Actor>();
-
 			RE::Actor* actor = a_event->objectInitialized->As<RE::Actor>();
 			if (actor) {
 				auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
@@ -83,8 +69,8 @@ namespace Event
 
 				if (actor->HasKeyword(keywordNPC)){
 					logger::info("Script init {} appeared", actor->GetName());
-					auto OBodyinstance = Body::OBody::GetInstance();
-					OBodyinstance->ProcessActor(actor);
+					auto obody = Body::OBody::GetInstance();
+					obody->ProcessActor(actor);
 				}
 			}
 
@@ -115,12 +101,10 @@ namespace Event
 			if (!a_event)
 				return EventResult::kContinue;
 
+			logger::info("GameLoaded");
 
-			logger::info("Loaded");
-
-			auto OBodyinstance = Body::OBody::GetInstance();
-			OBodyinstance->SetLoaded(true);
-			
+			auto obody = Body::OBody::GetInstance();
+			obody->setGameLoaded = true;
 
 			return EventResult::kContinue;
 		}
@@ -155,8 +139,6 @@ namespace Event
 				return EventResult::kContinue;
 
 			if (form->Is(RE::FormType::Armor) || form->Is(RE::FormType::Armature)) {
-				//Update(actor->GetFormID());
-
 				auto dobj = RE::BGSDefaultObjectManager::GetSingleton();
 				auto keywordNPC = dobj->GetObject<RE::BGSKeyword>(RE::DEFAULT_OBJECT::kKeywordNPC);
 
@@ -164,12 +146,10 @@ namespace Event
 					//logger::info("Processing equipment {} ", actor->GetName());
 
 					bool removingBody = false;
-
 					if (!a_event->equipped){
 						logger::info("Not equipped");
-						auto* changes = actor->GetInventoryChanges();
-						
-						auto* const armor = changes->GetArmorInSlot(32);
+						auto changes = actor->GetInventoryChanges();					
+						auto const armor = changes->GetArmorInSlot(32);
 
 						if (armor){
 							removingBody = (armor->formID == form->formID);
@@ -177,13 +157,10 @@ namespace Event
 							logger::info("armor not found");
 							removingBody = true;
 						}
-						
-						
 					}
 
-
-					auto OBodyinstance = Body::OBody::GetInstance();
-					OBodyinstance->ProcessActorEquipEvent(actor, removingBody);
+					auto obody = Body::OBody::GetInstance();
+					obody->ProcessActorEquipEvent(actor, removingBody);
 				}
 			}
 
@@ -200,41 +177,6 @@ namespace Event
 		EquipEventHandler& operator=(EquipEventHandler&&) = delete;
 	};
 
-	class MenuOpenCloseEventHandler : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
-	{
-	public:
-		static MenuOpenCloseEventHandler* GetSingleton()
-		{
-			static MenuOpenCloseEventHandler singleton;
-			return std::addressof(singleton);
-		}
-
-		virtual EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*)
-		{
-			auto uiStr = RE::InterfaceStrings::GetSingleton();
-			if (uiStr) {
-				auto& name = a_event->menuName;
-				if (name == uiStr->faderMenu) {
-					if (!a_event->opening) {
-						auto player = RE::PlayerCharacter::GetSingleton();
-						if (player) {
-							//Actor::UpdateActor(*player);
-						}
-					}
-				}
-			}
-			return EventResult::kContinue;
-		}
-
-	private:
-		MenuOpenCloseEventHandler() = default;
-		MenuOpenCloseEventHandler(const MenuOpenCloseEventHandler&) = delete;
-		MenuOpenCloseEventHandler(MenuOpenCloseEventHandler&&) = delete;
-		inline ~MenuOpenCloseEventHandler() = default;
-
-		MenuOpenCloseEventHandler& operator=(const MenuOpenCloseEventHandler&) = delete;
-		MenuOpenCloseEventHandler& operator=(MenuOpenCloseEventHandler&&) = delete;
-	};
 	/*
 	class AnimationEventHandler : public RE::BSTEventSink<RE::BGSFootstepEvent>
 	{
@@ -269,11 +211,6 @@ namespace Event
 			events->AddEventSink(InitScriptEventHandler::GetSingleton());
 			//events->AddEventSink(AnimationEventHandler::GetSingleton());
 		}
-
-		//auto ui = RE::UI::GetSingleton();
-		//if (ui) {
-		//	ui->AddEventSink(MenuOpenCloseEventHandler::GetSingleton());
-		//}
 	}
 }
 

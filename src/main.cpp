@@ -1,7 +1,7 @@
 #include "Version.h"
-#include "Body/OBody.h"
+#include "Body/Body.h"
+#include "Body/Event.h"
 #include "Papyrus/Papyrus.h"
-#include "Event/Event.h"
 #include "SKEE.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
@@ -17,21 +17,21 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 				return;
 			}
 
-			auto morphInt = static_cast<SKEE::IBodyMorphInterface*>(msg.interfaceMap->QueryInterface("BodyMorph"));
-			if (!morphInt) {
+			auto morphInterface = static_cast<SKEE::IBodyMorphInterface*>(msg.interfaceMap->QueryInterface("BodyMorph"));
+			if (!morphInterface) {
 				logger::critical("Couldn't get serialization MorphInterface!");
 				return;
 			}
 
-			logger::info("BodyMorph Version {}", morphInt->GetVersion());
+			logger::info("BodyMorph Version {}", morphInterface->GetVersion());
 			auto obody = Body::OBody::GetInstance();
-			if (!obody->SetMorphInterface(morphInt))
+			if (!obody->SetMorphInterface(morphInterface))
 				logger::info("BodyMorphInterace not provided");
 
-			obody->SetLoaded(false);
-			obody->GenerateDatabases();
+			obody->setGameLoaded = false;
+			obody->Generate();
+			//obody->PrintDatabase();
 
-			//obody->MountOBodyFaction();
 			Event::Register();
 		}
 		break;

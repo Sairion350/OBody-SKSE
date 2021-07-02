@@ -7,7 +7,7 @@
 #include <random>
 
 #include <spdlog/sinks/basic_file_sink.h>
-#include "pugixml.hpp"
+#include <pugixml.hpp>
 
 namespace WinAPI = SKSE::WinAPI;
 namespace logger = SKSE::log;
