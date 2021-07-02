@@ -1,11 +1,13 @@
 set(SOURCES
-	src/Body/OBody.cpp
-	src/Body/OBody.h
-	src/Event/Event.h
+	src/Body/Body.cpp
+	src/Body/Body.h
+	src/Body/Default.h
+	src/Body/Event.h
 	src/PCH.h
 	src/Papyrus/Papyrus.cpp
 	src/Papyrus/Papyrus.h
 	src/Papyrus/PapyrusBody.h
 	src/SKEE.h
+	src/STL.h
 	src/main.cpp
 )

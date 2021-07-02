@@ -82,8 +82,8 @@ set(Boost_USE_DEBUG_RUNTIME ON)
 
 add_subdirectory("lib/CommonLibSSE" CommonLibSSE)
 
-find_package(spdlog REQUIRED)
-find_package(pugixml REQUIRED)
+find_package(spdlog REQUIRED CONFIG)
+find_package(pugixml REQUIRED CONFIG)
 
 # ---- Add source files ----
 
