@@ -56,12 +56,20 @@ namespace Body
 		if (!IsProcessed(a_actor))
 			return;
 
+
 		bool naked = IsNaked(a_actor);
 		bool clotheActive = IsClotheActive(a_actor);
-		if (clotheActive && (naked || a_removingArmor))
+
+		if (!(naked) && (a_removingArmor)){
+			// Fires when removing their armor
+			OnActorNaked.SendEvent(a_actor);
+		}
+
+		if (clotheActive && (naked || a_removingArmor)){
 			RemoveClothePreset(a_actor);
-		else if (!clotheActive && !naked && setRefit)
+		}else if (!clotheActive && !naked && setRefit){
 			ApplyClothePreset(a_actor);
+		}
 
 		ApplyMorphs(a_actor);
 	}
@@ -369,9 +377,13 @@ namespace Body
 			}
 		}
 
-		if (!IsNaked(a_actor) && setRefit) {
-			logger::info("Not naked, adding cloth preset");
-			ApplyClothePreset(a_actor);
+		if (!IsNaked(a_actor)) {
+			if (setRefit){
+				logger::info("Not naked, adding cloth preset");
+				ApplyClothePreset(a_actor);
+			}
+		}else {
+			OnActorNaked.SendEvent(a_actor);
 		}
 
 		ApplyMorphs(a_actor);

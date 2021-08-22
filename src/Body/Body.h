@@ -5,6 +5,7 @@
 namespace Body
 {
 	inline SKSE::RegistrationSet<RE::Actor*> OnActorGenerated("OnActorGenerated"sv);
+	inline SKSE::RegistrationSet<RE::Actor*> OnActorNaked("OnActorNaked"sv);
 
 	enum class BodyType : int32_t
 	{

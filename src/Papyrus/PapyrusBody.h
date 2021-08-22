@@ -47,6 +47,11 @@ namespace PapyrusBody
 		Body::OnActorGenerated.Register(a_quest);
 	}
 
+	void RegisterForOBodyNakedEvent(RE::StaticFunctionTag*, RE::TESQuest* a_quest)
+	{
+		Body::OnActorNaked.Register(a_quest);
+	}
+
 	void ApplyPresetByFile(RE::StaticFunctionTag*, RE::Actor* a_actor, std::string a_path)
 	{
 		auto obody = Body::OBody::GetInstance();
@@ -90,6 +95,7 @@ namespace PapyrusBody
 		BIND(GetAllPossiblePresets);
 		BIND(AddClothesOverlay);
 		BIND(RegisterForOBodyEvent);
+		BIND(RegisterForOBodyNakedEvent);
 		BIND(GetFemaleDatabaseSize);
 		BIND(GetMaleDatabaseSize);
 
